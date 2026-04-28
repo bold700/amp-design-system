@@ -16,15 +16,36 @@ Code-mirror van het Figma-bestand [AMP Groep Design System](https://www.figma.co
 
 ## Snel starten
 
-```bash
-# 1. Open de demo's in je browser
-open index.html
+### 1. Repo klonen
 
-# 2. Start een Claude Code-sessie in deze repo
-claude
+```bash
+git clone https://github.com/bold700/amp-design-system.git
+cd amp-design-system
 ```
 
-Claude leest automatisch `.claude/CLAUDE.md` en gebruikt vanaf dat moment alleen `amp-*` klassen.
+### 2. Open in je editor
+
+Kies de tool die je gewend bent. **Claude leest in alle gevallen automatisch `.claude/CLAUDE.md`** zolang je deze map als project opent.
+
+| Tool | Command |
+|------|---------|
+| **Cursor** | `cursor .` |
+| **VS Code** | `code .` |
+| **Claude Code** (terminal) | `claude` |
+| **Zed** | `zed .` |
+| **Windsurf** | `windsurf .` |
+
+> Werkt het `cursor` of `code` commando niet? Open Cursor / VS Code, druk `⌘⇧P`, zoek "Shell Command: Install '...' in PATH" en run dat eenmalig.
+
+### 3. Bekijk de visuele referentie
+
+```bash
+open index.html
+```
+
+### 4. Start een use case
+
+Open de chat in je editor en plak de prompt uit `workshop/use-case-1-component.md` (of 2 / 3). Claude maakt dan een nieuw bestand naast de bestaande met alleen `amp-*` klassen — geen Tailwind, geen ander font dan Manrope, geen hardcoded hex-codes.
 
 ## Workshop
 

@@ -19,11 +19,38 @@ Het verschil zit in **drie dingen**:
 
 ## Setup vooraf (10 min, eenmalig)
 
-1. Zorg dat elke deelnemer Claude Code geïnstalleerd heeft (`npm i -g @anthropic-ai/claude-code` of via de installer)
-2. Kloon deze repo naar lokaal: `git clone <url>`
-3. Open een terminal in de repo
-4. Start Claude: `claude`
-5. Open in een browser `index.html` voor visuele referentie
+### Stap 1 — Repo klonen
+
+```bash
+git clone https://github.com/bold700/amp-design-system.git
+cd amp-design-system
+```
+
+### Stap 2 — Open in je editor
+
+Kies de tool die je gewend bent. **Claude leest in alle gevallen automatisch `.claude/CLAUDE.md`** zolang je de map als project opent.
+
+| Tool | Command |
+|------|---------|
+| **Cursor** (aanbevolen) | `cursor .` |
+| **VS Code** met Claude-extensie | `code .` |
+| **Claude Code** (terminal) | `claude` |
+| **Zed** | `zed .` |
+| **Windsurf** | `windsurf .` |
+
+> Als het `cursor` / `code` commando niet werkt, installeer de shell-helper: open Cursor → `⌘⇧P` → "Shell Command: Install 'cursor' command in PATH". Voor VS Code idem met `code`.
+
+### Stap 3 — Open de visuele referentie
+
+```bash
+open index.html
+```
+
+Of in Cursor/VS Code: rechtsklik op `index.html` → "Open with Live Server" / "Reveal in Finder".
+
+### Stap 4 — Start je eerste prompt
+
+Open de chat in je editor (bijv. `⌘L` in Cursor) en plak de prompt uit `workshop/use-case-1-component.md`.
 
 > **Belangrijk:** Claude leest automatisch `.claude/CLAUDE.md`. Dat dwingt het AMP-design system af. Dit hoeft niet handmatig in de prompt.
 
