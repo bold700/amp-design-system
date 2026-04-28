@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AMP Groep design system — Aan de slag</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="amp-tokens.css">
+  <link rel="stylesheet" href="amp-components.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@3.6.12/dist/vuetify.min.css">
+</head>
+<body>
+  <div id="app">
+    <v-app>
+      <v-main>
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; background: var(--amp-surface); border-bottom: 1px solid var(--amp-border); position: sticky; top: 0; z-index: 10;">
+    <a href="index.html" class="amp-logo"><span class="amp-logo-mark">A</span> AMP design system</a>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+      <a class="amp-btn amp-btn-md amp-btn-text" href="https://www.figma.com/design/0rmsgLNBJZ7Z2EsvlbAJk3?node-id=407-11638" target="_blank" rel="noopener noreferrer">Figma: dit frame</a>
+      <a class="amp-btn amp-btn-md amp-btn-outline" href="components-overview.html">Componenten</a>
+      <a class="amp-btn amp-btn-md amp-btn-primary" href="demo-dashboard.html">Dashboard-demo</a>
+    </div>
+  </div>
+
+  <div style="max-width: 720px; margin: 0 auto; padding: 48px 32px 80px;">
+    <header style="margin-bottom: 40px;">
+      <span class="amp-eyebrow">Documentatie</span>
+      <h1 class="amp-h1" style="margin: 8px 0 16px;">Aan de slag</h1>
+      <p class="amp-body-large" style="color: var(--amp-text-muted); margin: 0;">
+        Het AMP Groep design system is een verzameling UI-componenten en foundations die het team helpen om gebruiksvriendelijke productervaringen te bouwen.
+      </p>
+    </header>
+
+    <section style="margin-bottom: 40px;">
+      <h2 class="amp-h2" style="margin: 0 0 12px;">Het verschil in één oogopslag</h2>
+      <p class="amp-body" style="color: var(--amp-text-muted); margin: 0 0 24px;">
+        Het design system is opgebouwd uit drie lagen. Elke laag heeft een eigen rol in ontwerp en implementatie.
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="amp-card">
+          <h3 class="amp-h4" style="margin: 0 0 8px;">Foundations</h3>
+          <p class="amp-body-small" style="margin: 0 0 12px; color: var(--amp-text-muted);">
+            De kernvisuele stijlen van AMP Groep: kleur, spacing en pictogrammen.
+          </p>
+          <a class="amp-btn amp-btn-sm amp-btn-text" href="components-overview.html">Kleuren en tokens bekijken</a>
+        </div>
+        <div class="amp-card">
+          <h3 class="amp-h4" style="margin: 0 0 8px;">Components</h3>
+          <p class="amp-body-small" style="margin: 0 0 12px; color: var(--amp-text-muted);">
+            Herbruikbare UI-elementen voor specifieke interacties.
+          </p>
+          <a class="amp-btn amp-btn-sm amp-btn-text" href="components-overview.html">Naar componentbibliotheek</a>
+        </div>
+        <div class="amp-card">
+          <h3 class="amp-h4" style="margin: 0 0 8px;">Sections &amp; templates</h3>
+          <p class="amp-body-small" style="margin: 0 0 12px; color: var(--amp-text-muted);">
+            Voorbeelden van gecombineerde componenten voor in applicaties.
+          </p>
+          <a class="amp-btn amp-btn-sm amp-btn-text" href="demo-dashboard.html">Dashboard-demo openen</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="amp-alert amp-alert-info">
+      <span class="amp-alert-icon">ℹ</span>
+      <div class="amp-alert-content">
+        <h4 class="amp-alert-title">Het design system verandert continu</h4>
+        <p class="amp-alert-body">
+          Het AMP Groep design system is een levend document. Gebruik de Figma-bron als waarheid; deze HTML-demo volgt amp-tokens.css en amp-components.css uit deze repository.
+        </p>
+      </div>
+    </div>
+  </div>
+      </v-main>
+    </v-app>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.12/dist/vuetify.min.js"></script>
+  <script src="amp-vuetify-theme.js"></script>
+  <script>
+    const { createApp } = Vue;
+    const themeCtx = window.AmpVuetifyTheme.create();
+    createApp({}).use(themeCtx.vuetify).mount("#app");
+  </script>
+</body>
+</html>

@@ -12,6 +12,8 @@ Code-mirror van het Figma-bestand [AMP Groep Design System](https://www.figma.co
 | `index.html` | Landing met navigatie naar overzicht/dashboard/workshop |
 | `components-overview.html` | Visuele referentie van alle componenten |
 | `demo-dashboard.html` | Volledig dashboard als referentie-output |
+| `use-case-hub.html` | Startpunt om alle use cases direct op te pakken |
+| `TEAM-VIBE-CODERS.md` | Team-playbook met 3-iteratie delivery loop |
 | `workshop/` | Workshop-draaiboek met 3 use cases |
 
 ## Snel starten
@@ -47,6 +49,12 @@ open index.html
 
 Open de chat in je editor en plak de prompt uit `workshop/use-case-1-component.md` (of 2 / 3). Claude maakt dan een nieuw bestand naast de bestaande met alleen `amp-*` klassen — geen Tailwind, geen ander font dan Manrope, geen hardcoded hex-codes.
 
+Of gebruik de hub:
+
+```bash
+open use-case-hub.html
+```
+
 ## Workshop
 
 Zie [`workshop/README.md`](workshop/README.md) voor het volledige draaiboek met timing, use cases en bespreekpunten.
@@ -58,6 +66,7 @@ Zie [`workshop/README.md`](workshop/README.md) voor het volledige draaiboek met 
 - **Component-naming:** Vuetify-conventie omgezet naar `.amp-*` klassen
 - **Radius:** Bescheiden (4-8px) zoals Vuetify
 - **Elevation:** Material-stijl shadows (4 niveaus)
+- **Theming:** gedeelde init in `amp-vuetify-theme.js` voor consistente dark/light + Vuetify sync
 
 ## Open punt
 

@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="amp-tokens.css">
   <link rel="stylesheet" href="amp-components.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@3.6.12/dist/vuetify.min.css">
   <style>
     .demo-page { max-width: 1200px; margin: 0 auto; padding: 48px 32px; }
     .demo-section { margin-bottom: 64px; }
@@ -27,9 +28,12 @@
   </style>
 </head>
 <body>
+  <div id="app">
+    <v-app>
+      <v-main>
   <div class="top-bar">
     <a href="index.html" class="amp-logo"><span class="amp-logo-mark">A</span> AMP Design System</a>
-    <button class="theme-toggle" onclick="document.documentElement.toggleAttribute('data-theme') ? null : document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') === 'dark' ? '' : 'dark')">
+    <button id="theme-toggle-btn" class="theme-toggle" type="button">
       <span id="theme-label">🌙 Dark mode</span>
     </button>
   </div>
@@ -403,19 +407,33 @@
       </div>
     </section>
   </div>
+      </v-main>
+    </v-app>
+  </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.12/dist/vuetify.min.js"></script>
+  <script src="amp-vuetify-theme.js"></script>
   <script>
-    // Theme toggle
-    document.querySelector('.theme-toggle').addEventListener('click', () => {
-      const html = document.documentElement;
-      const current = html.getAttribute('data-theme');
-      if (current === 'dark') {
-        html.removeAttribute('data-theme');
-        document.getElementById('theme-label').textContent = '🌙 Dark mode';
+    const { createApp } = Vue;
+    const themeCtx = window.AmpVuetifyTheme.create();
+    const html = document.documentElement;
+    createApp({}).use(themeCtx.vuetify).mount("#app");
+
+    function applyTheme(dark) {
+      if (dark) {
+        themeCtx.applyTheme(true);
+        document.getElementById("theme-label").textContent = "☀ Light mode";
       } else {
-        html.setAttribute('data-theme', 'dark');
-        document.getElementById('theme-label').textContent = '☀ Light mode';
+        themeCtx.applyTheme(false);
+        document.getElementById("theme-label").textContent = "🌙 Dark mode";
       }
+    }
+
+    applyTheme(themeCtx.initialDark);
+
+    document.getElementById("theme-toggle-btn").addEventListener("click", () => {
+      applyTheme(html.getAttribute("data-theme") !== "dark");
     });
   </script>
 </body>

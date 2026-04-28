@@ -9,181 +9,186 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="amp-tokens.css">
   <link rel="stylesheet" href="amp-components.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@3.6.12/dist/vuetify.min.css">
 </head>
 <body>
-  <div class="amp-app-shell">
-    <!-- Sidebar -->
-    <aside class="amp-sidebar sidebar">
-      <a href="index.html" class="amp-sidebar-brand">
-        <span class="amp-logo-mark">A</span>
-        <span>AMP Portal</span>
-      </a>
-      <a class="amp-nav-item active" href="#"><span class="amp-nav-icon">⌂</span> Overzicht</a>
-      <a class="amp-nav-item" href="#"><span class="amp-nav-icon">👥</span> Klanten</a>
-      <a class="amp-nav-item" href="#"><span class="amp-nav-icon">📦</span> Bestellingen</a>
-      <a class="amp-nav-item" href="#"><span class="amp-nav-icon">💳</span> Facturen</a>
-      <a class="amp-nav-item" href="#"><span class="amp-nav-icon">📊</span> Rapporten</a>
-      <a class="amp-nav-item" href="#"><span class="amp-nav-icon">⚙</span> Instellingen</a>
-      <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid var(--amp-border); display: flex; align-items: center; gap: 12px;">
-        <span class="amp-avatar amp-avatar-sm">JV</span>
-        <div style="flex: 1; min-width: 0;">
-          <div style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Jet van Seumeren</div>
-          <div style="font-size: 11px; color: var(--amp-text-muted);">Beheerder</div>
-        </div>
-      </div>
-    </aside>
+  <div id="app"></div>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.12/dist/vuetify.min.js"></script>
+  <script src="amp-vuetify-theme.js"></script>
+  <script>
+    const { createApp, ref, computed } = Vue;
+    const themeCtx = window.AmpVuetifyTheme.create();
+    createApp({
+      setup() {
+        const tab = ref("recent");
+        const search = ref("");
+        const rows = ref([
+          { klant: "Jan de Vries", email: "jan@voorbeeld.nl", status: "Actief", bedrag: "€ 1.245,00", datum: "28 apr 2026" },
+          { klant: "Anna Bakker", email: "anna@voorbeeld.nl", status: "In behandeling", bedrag: "€ 580,00", datum: "27 apr 2026" },
+          { klant: "Pieter Coenen", email: "pieter@voorbeeld.nl", status: "Geannuleerd", bedrag: "€ 320,00", datum: "26 apr 2026" },
+          { klant: "Sophie Klaassen", email: "sophie@voorbeeld.nl", status: "Actief", bedrag: "€ 2.100,00", datum: "25 apr 2026" },
+          { klant: "Marco Dijkstra", email: "marco@voorbeeld.nl", status: "In behandeling", bedrag: "€ 845,00", datum: "24 apr 2026" }
+        ]);
+        const headers = [
+          { title: "Klant", key: "klant", sortable: false },
+          { title: "Status", key: "status", sortable: false },
+          { title: "Bedrag", key: "bedrag", sortable: false },
+          { title: "Datum", key: "datum", sortable: false },
+          { title: "", key: "actions", sortable: false }
+        ];
 
-    <!-- Topbar -->
-    <header class="amp-topbar topbar">
-      <div class="amp-topbar-search">
-        <input type="search" class="amp-input" placeholder="Zoek klanten, bestellingen, facturen...">
-      </div>
-      <div class="amp-topbar-actions">
-        <button class="amp-btn amp-btn-md amp-btn-text">🔔</button>
-        <button class="amp-btn amp-btn-md amp-btn-primary">+ Nieuwe klant</button>
-      </div>
-    </header>
+        const filteredRows = computed(() => {
+          let out = rows.value;
+          if (tab.value === "open") out = out.filter((r) => r.status === "In behandeling");
+          if (tab.value === "done") out = out.filter((r) => r.status === "Actief");
+          if (!search.value) return out;
+          const q = search.value.toLowerCase();
+          return out.filter((r) => `${r.klant} ${r.email} ${r.bedrag}`.toLowerCase().includes(q));
+        });
 
-    <!-- Main -->
-    <main class="main">
-      <div class="amp-page-header">
-        <div>
-          <nav class="amp-breadcrumb" style="margin-bottom: 8px;">
-            <a href="#" class="amp-breadcrumb-item">Home</a>
-            <span class="amp-breadcrumb-sep">/</span>
-            <span class="amp-breadcrumb-item active">Overzicht</span>
-          </nav>
-          <h1 class="amp-page-title">Goedemorgen, Jet 👋</h1>
-          <p class="amp-page-subtitle">Hier is wat er vandaag gebeurt in je portaal.</p>
-        </div>
-        <div style="display: flex; gap: 8px;">
-          <button class="amp-btn amp-btn-md amp-btn-secondary">Export</button>
-          <button class="amp-btn amp-btn-md amp-btn-primary">Rapport draaien</button>
-        </div>
-      </div>
+        const statusColor = (status) => {
+          if (status === "Actief") return "success";
+          if (status === "In behandeling") return "warning";
+          return "error";
+        };
 
-      <!-- Stat cards -->
-      <div class="amp-stat-grid">
-        <div class="amp-stat-card">
-          <p class="amp-stat-label">Omzet deze maand</p>
-          <p class="amp-stat-value">€ 84.250</p>
-          <span class="amp-stat-change up">↑ 12,4% vs vorige maand</span>
-        </div>
-        <div class="amp-stat-card">
-          <p class="amp-stat-label">Actieve klanten</p>
-          <p class="amp-stat-value">1.284</p>
-          <span class="amp-stat-change up">↑ 8,2%</span>
-        </div>
-        <div class="amp-stat-card">
-          <p class="amp-stat-label">Open facturen</p>
-          <p class="amp-stat-value">37</p>
-          <span class="amp-stat-change down">↓ 3,1%</span>
-        </div>
-        <div class="amp-stat-card">
-          <p class="amp-stat-label">Conversiegraad</p>
-          <p class="amp-stat-value">3,42%</p>
-          <span class="amp-stat-change up">↑ 0,8%</span>
-        </div>
-      </div>
-
-      <!-- Tabs + table -->
-      <div style="background: var(--amp-surface); border: 1px solid var(--amp-border); border-radius: var(--amp-radius-lg); overflow: hidden; margin-bottom: 24px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid var(--amp-border);">
-          <div class="amp-tabs" style="border-bottom: none;">
-            <button class="amp-tab active">Recent</button>
-            <button class="amp-tab">In behandeling</button>
-            <button class="amp-tab">Voltooid</button>
-          </div>
-          <button class="amp-btn amp-btn-sm amp-btn-text">Alle bekijken →</button>
-        </div>
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="background: var(--amp-surface-2);">
-              <th style="text-align: left; padding: 14px 24px; font-size: 12px; font-weight: 600; color: var(--amp-text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Klant</th>
-              <th style="text-align: left; padding: 14px 16px; font-size: 12px; font-weight: 600; color: var(--amp-text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Status</th>
-              <th style="text-align: left; padding: 14px 16px; font-size: 12px; font-weight: 600; color: var(--amp-text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Bedrag</th>
-              <th style="text-align: left; padding: 14px 16px; font-size: 12px; font-weight: 600; color: var(--amp-text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Datum</th>
-              <th style="padding: 14px 24px;"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-top: 1px solid var(--amp-border);">
-              <td style="padding: 16px 24px;"><div style="display: flex; align-items: center; gap: 12px;"><span class="amp-avatar amp-avatar-sm">JV</span><div><div style="font-weight: 600; font-size: 14px;">Jan de Vries</div><div style="font-size: 12px; color: var(--amp-text-muted);">jan@voorbeeld.nl</div></div></div></td>
-              <td style="padding: 16px;"><span class="amp-badge amp-badge-success-subtle">● Actief</span></td>
-              <td style="padding: 16px; font-weight: 600;">€ 1.245,00</td>
-              <td style="padding: 16px; color: var(--amp-text-muted); font-size: 14px;">28 apr 2026</td>
-              <td style="padding: 16px 24px; text-align: right;"><button class="amp-btn amp-btn-sm amp-btn-text">Details</button></td>
-            </tr>
-            <tr style="border-top: 1px solid var(--amp-border);">
-              <td style="padding: 16px 24px;"><div style="display: flex; align-items: center; gap: 12px;"><span class="amp-avatar amp-avatar-sm">AB</span><div><div style="font-weight: 600; font-size: 14px;">Anna Bakker</div><div style="font-size: 12px; color: var(--amp-text-muted);">anna@voorbeeld.nl</div></div></div></td>
-              <td style="padding: 16px;"><span class="amp-badge amp-badge-warning-subtle">⏳ In behandeling</span></td>
-              <td style="padding: 16px; font-weight: 600;">€ 580,00</td>
-              <td style="padding: 16px; color: var(--amp-text-muted); font-size: 14px;">27 apr 2026</td>
-              <td style="padding: 16px 24px; text-align: right;"><button class="amp-btn amp-btn-sm amp-btn-text">Details</button></td>
-            </tr>
-            <tr style="border-top: 1px solid var(--amp-border);">
-              <td style="padding: 16px 24px;"><div style="display: flex; align-items: center; gap: 12px;"><span class="amp-avatar amp-avatar-sm">PC</span><div><div style="font-weight: 600; font-size: 14px;">Pieter Coenen</div><div style="font-size: 12px; color: var(--amp-text-muted);">pieter@voorbeeld.nl</div></div></div></td>
-              <td style="padding: 16px;"><span class="amp-badge amp-badge-error-subtle">✕ Geannuleerd</span></td>
-              <td style="padding: 16px; font-weight: 600;">€ 320,00</td>
-              <td style="padding: 16px; color: var(--amp-text-muted); font-size: 14px;">26 apr 2026</td>
-              <td style="padding: 16px 24px; text-align: right;"><button class="amp-btn amp-btn-sm amp-btn-text">Details</button></td>
-            </tr>
-            <tr style="border-top: 1px solid var(--amp-border);">
-              <td style="padding: 16px 24px;"><div style="display: flex; align-items: center; gap: 12px;"><span class="amp-avatar amp-avatar-sm">SK</span><div><div style="font-weight: 600; font-size: 14px;">Sophie Klaassen</div><div style="font-size: 12px; color: var(--amp-text-muted);">sophie@voorbeeld.nl</div></div></div></td>
-              <td style="padding: 16px;"><span class="amp-badge amp-badge-success-subtle">● Actief</span></td>
-              <td style="padding: 16px; font-weight: 600;">€ 2.100,00</td>
-              <td style="padding: 16px; color: var(--amp-text-muted); font-size: 14px;">25 apr 2026</td>
-              <td style="padding: 16px 24px; text-align: right;"><button class="amp-btn amp-btn-sm amp-btn-text">Details</button></td>
-            </tr>
-            <tr style="border-top: 1px solid var(--amp-border);">
-              <td style="padding: 16px 24px;"><div style="display: flex; align-items: center; gap: 12px;"><span class="amp-avatar amp-avatar-sm">MD</span><div><div style="font-weight: 600; font-size: 14px;">Marco Dijkstra</div><div style="font-size: 12px; color: var(--amp-text-muted);">marco@voorbeeld.nl</div></div></div></td>
-              <td style="padding: 16px;"><span class="amp-badge amp-badge-warning-subtle">⏳ In behandeling</span></td>
-              <td style="padding: 16px; font-weight: 600;">€ 845,00</td>
-              <td style="padding: 16px; color: var(--amp-text-muted); font-size: 14px;">24 apr 2026</td>
-              <td style="padding: 16px 24px; text-align: right;"><button class="amp-btn amp-btn-sm amp-btn-text">Details</button></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Two-column area -->
-      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
-        <div class="amp-card">
-          <h3 class="amp-card-title">Maandoverzicht</h3>
-          <p class="amp-card-subtitle">Omzet april 2026</p>
-          <div style="height: 220px; background: linear-gradient(180deg, var(--amp-primary-muted) 0%, transparent 100%); border-radius: var(--amp-radius-md); position: relative; margin-top: 16px;">
-            <svg viewBox="0 0 400 200" style="width: 100%; height: 100%;" preserveAspectRatio="none">
-              <polyline fill="none" stroke="#226499" stroke-width="2" points="0,150 50,130 100,140 150,90 200,100 250,60 300,80 350,40 400,55"/>
-              <polyline fill="rgba(34,100,153,0.1)" stroke="none" points="0,150 50,130 100,140 150,90 200,100 250,60 300,80 350,40 400,55 400,200 0,200"/>
-            </svg>
-          </div>
-        </div>
-        <div class="amp-card">
-          <h3 class="amp-card-title">Acties vereist</h3>
-          <p class="amp-card-subtitle">3 items</p>
-          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
-            <div class="amp-alert amp-alert-warning" style="padding: 12px 14px;">
-              <span class="amp-alert-icon">⚠</span>
-              <div class="amp-alert-content">
-                <p class="amp-alert-body" style="font-size: 13px;"><strong>3 facturen</strong> wachten op goedkeuring</p>
-              </div>
+        return { tab, search, rows, headers, filteredRows, statusColor };
+      },
+      template: `
+        <v-app>
+          <v-navigation-drawer rail-width="76" width="252" permanent border>
+            <div style="padding: 16px 12px;">
+              <a href="index.html" class="amp-sidebar-brand" style="margin: 0 0 12px 0; display: inline-flex;">
+                <span class="amp-logo-mark">A</span>
+                <span>AMP Portal</span>
+              </a>
+              <v-list nav density="comfortable">
+                <v-list-item prepend-icon="mdi-view-dashboard" title="Overzicht" active color="primary"></v-list-item>
+                <v-list-item prepend-icon="mdi-account-group" title="Klanten"></v-list-item>
+                <v-list-item prepend-icon="mdi-package-variant" title="Bestellingen"></v-list-item>
+                <v-list-item prepend-icon="mdi-credit-card-outline" title="Facturen"></v-list-item>
+                <v-list-item prepend-icon="mdi-chart-line" title="Rapporten"></v-list-item>
+                <v-list-item prepend-icon="mdi-cog-outline" title="Instellingen"></v-list-item>
+              </v-list>
             </div>
-            <div class="amp-alert amp-alert-info" style="padding: 12px 14px;">
-              <span class="amp-alert-icon">ℹ</span>
-              <div class="amp-alert-content">
-                <p class="amp-alert-body" style="font-size: 13px;"><strong>5 nieuwe klanten</strong> deze week</p>
+          </v-navigation-drawer>
+
+          <v-app-bar flat border>
+            <v-text-field
+              v-model="search"
+              density="compact"
+              variant="outlined"
+              hide-details
+              prepend-inner-icon="mdi-magnify"
+              placeholder="Zoek klanten, bestellingen, facturen..."
+              style="max-width: 420px;"
+            ></v-text-field>
+            <v-spacer></v-spacer>
+            <v-btn icon="mdi-bell-outline" variant="text"></v-btn>
+            <v-btn color="primary" class="ml-2">+ Nieuwe klant</v-btn>
+          </v-app-bar>
+
+          <v-main>
+            <v-container fluid style="padding: 32px;">
+              <div class="amp-page-header">
+                <div>
+                  <div class="amp-breadcrumb" style="margin-bottom: 8px;">
+                    <span class="amp-breadcrumb-item">Home</span>
+                    <span class="amp-breadcrumb-sep">/</span>
+                    <span class="amp-breadcrumb-item active">Overzicht</span>
+                  </div>
+                  <h1 class="amp-page-title">Goedemorgen, Jet 👋</h1>
+                  <p class="amp-page-subtitle">Hier is wat er vandaag gebeurt in je portaal.</p>
+                </div>
+                <div style="display:flex; gap:8px;">
+                  <v-btn variant="tonal">Export</v-btn>
+                  <v-btn color="primary">Rapport draaien</v-btn>
+                </div>
               </div>
-            </div>
-            <div class="amp-alert amp-alert-error" style="padding: 12px 14px;">
-              <span class="amp-alert-icon">✕</span>
-              <div class="amp-alert-content">
-                <p class="amp-alert-body" style="font-size: 13px;"><strong>1 betaling</strong> mislukt</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
+
+              <v-row class="mb-2">
+                <v-col cols="12" md="3">
+                  <v-card variant="outlined" rounded="lg"><v-card-text><div class="amp-stat-label">Omzet deze maand</div><div class="amp-stat-value">€ 84.250</div><div class="amp-stat-change up">↑ 12,4% vs vorige maand</div></v-card-text></v-card>
+                </v-col>
+                <v-col cols="12" md="3">
+                  <v-card variant="outlined" rounded="lg"><v-card-text><div class="amp-stat-label">Actieve klanten</div><div class="amp-stat-value">1.284</div><div class="amp-stat-change up">↑ 8,2%</div></v-card-text></v-card>
+                </v-col>
+                <v-col cols="12" md="3">
+                  <v-card variant="outlined" rounded="lg"><v-card-text><div class="amp-stat-label">Open facturen</div><div class="amp-stat-value">37</div><div class="amp-stat-change down">↓ 3,1%</div></v-card-text></v-card>
+                </v-col>
+                <v-col cols="12" md="3">
+                  <v-card variant="outlined" rounded="lg"><v-card-text><div class="amp-stat-label">Conversiegraad</div><div class="amp-stat-value">3,42%</div><div class="amp-stat-change up">↑ 0,8%</div></v-card-text></v-card>
+                </v-col>
+              </v-row>
+
+              <v-card variant="outlined" rounded="lg" class="mb-6">
+                <div style="padding: 0 12px; border-bottom: 1px solid var(--amp-border); display:flex; align-items:center; justify-content:space-between;">
+                  <v-tabs v-model="tab" color="primary">
+                    <v-tab value="recent">Recent</v-tab>
+                    <v-tab value="open">In behandeling</v-tab>
+                    <v-tab value="done">Voltooid</v-tab>
+                  </v-tabs>
+                  <v-btn variant="text">Alle bekijken</v-btn>
+                </div>
+                <v-data-table
+                  :headers="headers"
+                  :items="filteredRows"
+                  item-value="klant"
+                  hide-default-footer
+                  density="comfortable"
+                >
+                  <template #item.klant="{ item }">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                      <span class="amp-avatar amp-avatar-sm">{{ item.klant.split(' ').map(n => n[0]).join('').slice(0,2) }}</span>
+                      <div>
+                        <div style="font-weight:600;">{{ item.klant }}</div>
+                        <div style="font-size:12px; color: var(--amp-text-muted);">{{ item.email }}</div>
+                      </div>
+                    </div>
+                  </template>
+                  <template #item.status="{ item }">
+                    <v-chip :color="statusColor(item.status)" size="small" variant="tonal">{{ item.status }}</v-chip>
+                  </template>
+                  <template #item.actions>
+                    <v-btn variant="text" size="small">Details</v-btn>
+                  </template>
+                </v-data-table>
+              </v-card>
+
+              <v-row>
+                <v-col cols="12" md="8">
+                  <v-card variant="outlined" rounded="lg">
+                    <v-card-title>Maandoverzicht</v-card-title>
+                    <v-card-subtitle>Omzet april 2026</v-card-subtitle>
+                    <v-card-text>
+                      <div style="height:220px;background:linear-gradient(180deg, var(--amp-primary-muted) 0%, transparent 100%);border-radius:8px;padding-top:8px;">
+                        <svg viewBox="0 0 400 200" style="width:100%;height:100%;" preserveAspectRatio="none">
+                          <polyline fill="none" stroke="#226499" stroke-width="2" points="0,150 50,130 100,140 150,90 200,100 250,60 300,80 350,40 400,55"/>
+                          <polyline fill="rgba(34,100,153,0.1)" stroke="none" points="0,150 50,130 100,140 150,90 200,100 250,60 300,80 350,40 400,55 400,200 0,200"/>
+                        </svg>
+                      </div>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+                <v-col cols="12" md="4">
+                  <v-card variant="outlined" rounded="lg">
+                    <v-card-title>Acties vereist</v-card-title>
+                    <v-card-subtitle>3 items</v-card-subtitle>
+                    <v-card-text style="display:flex; flex-direction:column; gap:12px;">
+                      <v-alert type="warning" variant="tonal" density="comfortable"><strong>3 facturen</strong> wachten op goedkeuring</v-alert>
+                      <v-alert type="info" variant="tonal" density="comfortable"><strong>5 nieuwe klanten</strong> deze week</v-alert>
+                      <v-alert type="error" variant="tonal" density="comfortable"><strong>1 betaling</strong> mislukt</v-alert>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </v-container>
+          </v-main>
+        </v-app>
+      `
+    }).use(themeCtx.vuetify).mount("#app");
+  </script>
 </body>
 </html>

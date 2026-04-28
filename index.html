@@ -9,12 +9,13 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="amp-tokens.css">
   <link rel="stylesheet" href="amp-components.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@3.6.12/dist/vuetify.min.css">
   <style>
     .landing { min-height: 100vh; display: flex; flex-direction: column; }
     .landing-nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 48px; border-bottom: 1px solid var(--amp-border); }
     .landing-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 64px 32px; text-align: center; }
-    .landing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1080px; margin: 64px auto 0; padding: 0 32px; width: 100%; }
-    @media (max-width: 768px) { .landing-grid { grid-template-columns: 1fr; padding: 0 16px; } }
+    .landing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; max-width: 1200px; margin: 64px auto 0; padding: 0 32px; width: 100%; }
+    @media (max-width: 768px) { .landing-grid { padding: 0 16px; } }
     .nav-card { background: var(--amp-surface); border: 1px solid var(--amp-border); border-radius: var(--amp-radius-lg); padding: 28px; text-decoration: none; color: var(--amp-text); transition: border-color 0.15s ease, box-shadow 0.2s ease, transform 0.15s ease; display: flex; flex-direction: column; gap: 8px; }
     .nav-card:hover { border-color: var(--amp-primary); box-shadow: var(--amp-elevation-3); transform: translateY(-2px); }
     .nav-card .icon { width: 48px; height: 48px; border-radius: var(--amp-radius-md); background: var(--amp-primary-muted); color: var(--amp-primary); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; margin-bottom: 8px; }
@@ -24,6 +25,9 @@
   </style>
 </head>
 <body>
+  <div id="app">
+    <v-app>
+      <v-main>
   <div class="landing">
     <nav class="landing-nav">
       <a href="index.html" class="amp-logo"><span class="amp-logo-mark">A</span> AMP Design System</a>
@@ -56,13 +60,39 @@
           <h3>Dashboard demo</h3>
           <p>Volledig customer dashboard als referentie-output voor use case 3 in de workshop.</p>
         </a>
+        <a class="nav-card" href="aan-de-slag.html">
+          <div class="icon">📘</div>
+          <h3>Aan de slag</h3>
+          <p>Zelfde inhoud als het Figma-frame Getting started (node 407:11638): drie lagen en info-alert, alleen AMP-componenten.</p>
+        </a>
         <a class="nav-card" href="workshop/README.md">
           <div class="icon">🎓</div>
           <h3>Workshop draaiboek</h3>
           <p>Instructeur-flow, timing, 3 use cases met prompts en verwachte resultaten.</p>
         </a>
+        <a class="nav-card" href="vuetify-bridge.html">
+          <div class="icon">🧩</div>
+          <h3>Vuetify bridge</h3>
+          <p>Fallback voor missende componenten met Material Vue (date picker, autocomplete, dialog).</p>
+        </a>
+        <a class="nav-card" href="use-case-hub.html">
+          <div class="icon">🚀</div>
+          <h3>Use case hub</h3>
+          <p>Teamflow voor frontenders en devs: 3 iteraties per use case, met directe links naar alle prompts.</p>
+        </a>
       </div>
     </section>
   </div>
+      </v-main>
+    </v-app>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.12/dist/vuetify.min.js"></script>
+  <script src="amp-vuetify-theme.js"></script>
+  <script>
+    const { createApp } = Vue;
+    const themeCtx = window.AmpVuetifyTheme.create();
+    createApp({}).use(themeCtx.vuetify).mount("#app");
+  </script>
 </body>
 </html>

@@ -1,0 +1,9 @@
+{
+  "name": "amp-design-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AMP Design System static UI demos",
+  "scripts": {
+    "test": "node --test"
+  }
+}
