@@ -313,7 +313,7 @@ async function selectFromMap(courierId) {
             />
             <v-btn
               v-else
-              :icon="panelExpanded ? 'mdi-unfold-less-vertical' : 'mdi-unfold-more-vertical'"
+              :icon="panelExpanded ? 'mdi-unfold-less-horizontal' : 'mdi-unfold-more-horizontal'"
               size="small"
               variant="tonal"
               @click="panelExpanded = !panelExpanded"
