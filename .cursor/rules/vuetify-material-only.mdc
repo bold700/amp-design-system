@@ -1,0 +1,21 @@
+---
+description: Enforce Vuetify Material-only UI usage
+alwaysApply: true
+---
+
+# Vuetify Material Only
+
+Gebruik in dit project alleen Vuetify Material componenten voor alle UI.
+
+- Gebruik alleen Vuetify componenten in templates (`v-btn`, `v-card`, `v-text-field`, etc.) of de PascalCase varianten (`VBtn`, `VCard`, `VTextField`).
+- Schrijf geen custom basis-UI componenten zoals eigen knoppen, inputs, cards, dialogs of tabs als Vuetify een equivalent heeft.
+- Gebruik geen alternatieve UI libraries (zoals Tailwind UI component kits, Material Web, Bootstrap, Chakra, Ant Design, PrimeVue).
+- Gebruik Vuetify theming en design tokens voor kleur, spacing en typografie; geen losse ad-hoc styling als standaardoptie.
+- Bij nieuwe schermen of refactors: eerst bestaande Vuetify patronen hergebruiken, pas daarna uitbreiden.
+
+## Snelle keuzes
+
+- **Knop nodig?** Gebruik `v-btn`.
+- **Form input nodig?** Gebruik `v-text-field`, `v-select`, `v-textarea`, `v-checkbox`, `v-radio`, `v-switch`.
+- **Layout nodig?** Gebruik `v-container`, `v-row`, `v-col`, `v-sheet`, `v-card`.
+- **Navigatie nodig?** Gebruik `v-toolbar`, `v-tabs`, `v-navigation-drawer`, `v-list`.
