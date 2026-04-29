@@ -173,6 +173,88 @@ const views = [
 
 ---
 
+## UX guard rails (altijd toepassen, ook zonder dat de prompt erom vraagt)
+
+Een developer-prompt zoals "maak een formulier" of "voeg een tabel toe"
+is meestal incompleet. Pas onderstaande regels altijd toe zodat de
+output een complete, productie-klare UI is:
+
+### Inputs / formulieren
+- Elk veld krijgt een label (`label` prop op v-text-field/v-select etc.)
+- Verplichte velden krijgen `:rules="[v => !!v || 'Vereist']"`
+- Email: `:rules="[v => /.+@.+\..+/.test(v) || 'Geldig e-mailadres']"`
+- Lange tekst → `<v-textarea>`, niet meerdere v-text-fields
+- Wikkel het hele formulier in `<v-form ref="form" @submit.prevent="...">`
+- Gebruik `density="compact"` voor inline forms in panels, default density
+  voor full-page forms
+
+### States — elk interactief element heeft alle states
+- **Hover** (Vuetify regelt dit automatisch via variant)
+- **Focus** — zichtbaar; nooit `outline: none` zonder alternatief
+- **Active** — gebruik default Vuetify gedrag
+- **Disabled** — `:disabled="..."` als de actie nu niet kan
+- **Loading** — `<v-btn :loading="...">` voor async actions, of
+  `<v-progress-linear>` / `<v-skeleton-loader>` voor data-fetching
+
+### Feedback bij user actions
+- Async actie geslaagd → `<v-snackbar color="success">`
+- Async actie gefaald → `<v-snackbar color="error">` met retry-knop
+- Destructieve actie → bevestig met `<v-dialog>` ("Weet je het zeker?")
+- Validatie-fouten → inline bij het veld via Vuetify rules
+- Lange wachttijd (>300ms) → loading-indicator zichtbaar
+
+### Empty / loading states
+- Lijst die leeg is → `<v-empty-state>` of vergelijkbare hint, nooit
+  niets renderen
+- Eerste-load → `<v-skeleton-loader>` zodat layout niet springt
+- Filter zonder resultaat → vermeld dat duidelijk + suggereer reset
+
+### Responsive (mobile-first)
+- Gebruik `<v-row>` + `<v-col cols="12" md="6">` patroon
+- Touch targets minimaal 44px (Vuetify default v-btn is 36-40, dus
+  size="default" is OK; vermijd size="x-small" voor mobiel-tappable)
+- Sidebar / drawer op mobiel via `<v-navigation-drawer temporary>`
+- Kolom-stapel op mobiel: `cols="12"` zonder breakpoint = altijd vol;
+  `md="6"` = halve breedte vanaf 960px
+
+### Accessibility (WCAG AA)
+- Semantische HTML via Vuetify (v-btn, v-text-field, v-list etc.)
+- Iconen die alleen visueel zijn → een tekstlabel ernaast of `aria-label`
+- Knoppen zonder zichtbare tekst → `<v-btn icon aria-label="Sluiten" />`
+- Form-error feedback in beide contrast (kleur + tekst), niet alleen rood
+
+### Visuele hiërarchie
+- Belangrijkste actie → `<v-btn color="primary" variant="elevated">`
+- Secundaire actie → `<v-btn variant="outlined">`
+- Tertiaire / annuleer → `<v-btn variant="text">`
+- Destructief → `<v-btn color="error" variant="elevated">`
+- Hou per scherm één primaire actie
+
+### Lege / placeholder data
+- Gebruik realistische Nederlandse placeholders: namen, adressen,
+  bedragen — geen "Lorem ipsum" of "Test User 1"
+- Genereer deterministisch (zelfde data bij reload), niet random
+- Zie `src/data/couriers.js` als referentie
+
+### Wat NOOIT zomaar doen
+- Een form bouwen zonder validation → altijd minimaal `required`-checks
+- Een tabel zonder loading state of empty state
+- Een knop "Verwijderen" zonder bevestiging
+- Een mobiel-onvriendelijke layout (vaste pixel-breedtes ipv `<v-col>`)
+- Custom kleuren ipv theme-tokens
+
+### Wanneer om input vragen
+Vraag de gebruiker max één keer kort als het volgende ontbreekt:
+- Wie is de eindgebruiker (rol, context)?
+- Welke acties moet de gebruiker kunnen doen?
+- Welke data is beschikbaar (komt het uit bestaande data of is
+  nieuwe data nodig)?
+
+Anders: neem zelf realistische beslissingen op basis van het
+domein (logistiek/AMP) en bouw door. Niet eindeloos doorvragen.
+
+---
+
 ## Vuetify-only regels (strikt)
 
 ❌ **Eigen CSS-klassen voor componenten** — geen `.my-button`, etc.
