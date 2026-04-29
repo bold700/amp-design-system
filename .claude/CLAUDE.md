@@ -112,9 +112,13 @@ Een nieuwe kleur nodig? Voeg toe aan dit object, gebruik via `color="..."`.
 
 ## Toegestaan (mits expliciet)
 
-✅ **Custom CSS** alleen voor zaken die Vuetify niet dekt (bijv. een SVG-pad, een unieke achtergrond-illustratie). Gebruik dan altijd Vuetify theme-tokens via `rgb(var(--v-theme-primary))`.
+✅ **Leaflet voor kaarten** — Vuetify heeft geen kaartcomponent. Gebruik `@vue-leaflet/vue-leaflet` (al geïnstalleerd) met `<l-map>`, `<l-tile-layer>`, `<l-circle-marker>`, `<l-polyline>`, `<l-marker>`. OSM-tiles zijn gratis, geen API-key nodig. Zoom-knoppen met `:options="{ zoomControl: false }"` uitzetten en eigen `<v-btn>` aan `mapRef.value.leafletObject.zoomIn()` koppelen.
+
+✅ **Custom CSS** alleen voor zaken die Vuetify én Leaflet niet dekken (bijv. een SVG-pad, een unieke achtergrond-illustratie). Gebruik dan altijd Vuetify theme-tokens via `rgb(var(--v-theme-primary))`.
 
 ✅ **Component-scoped `<style>`** in een `.vue` bestand voor één-component visuele tweaks die niet via Vuetify-props kunnen. Houd het minimaal.
+
+✅ **Charts** — Vuetify heeft geen chart-component. Bij grafieken: `apexcharts` of `chart.js` (vraag eerst de gebruiker welke).
 
 ---
 

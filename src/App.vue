@@ -1,7 +1,10 @@
 <script setup>
 import { ref } from "vue";
+import { LMap, LTileLayer, LCircleMarker, LPolyline } from "@vue-leaflet/vue-leaflet";
+import "leaflet/dist/leaflet.css";
 
 const activeMode = ref("kaart");
+const mapRef = ref(null);
 
 const courierStats = [
   { label: "Bezorgers", value: "119", icon: "mdi-account-group" },
@@ -57,14 +60,31 @@ const couriers = [
   }
 ];
 
-const mapPins = [
-  { top: "32%", left: "45%", color: "#16a5ff" },
-  { top: "34%", left: "47%", color: "#16a5ff" },
-  { top: "38%", left: "44%", color: "#16a5ff" },
-  { top: "40%", left: "49%", color: "#e91ec8" },
-  { top: "42%", left: "47%", color: "#8b35ff" },
-  { top: "58%", left: "61%", color: "#16a5ff" }
+const mapCenter = ref([52.0314, 5.1681]); // Houten, NL
+const mapZoom = ref(11);
+
+// Stops voor de actieve bezorger (AMP Mahmut C) — rond Houten
+const stops = [
+  { lat: 52.0314, lng: 5.1681, color: "#16a5ff" }, // Houten centrum
+  { lat: 52.0407, lng: 5.1521, color: "#16a5ff" }, // Houten west
+  { lat: 52.0214, lng: 5.1839, color: "#16a5ff" }, // Houten oost
+  { lat: 52.0102, lng: 5.1421, color: "#e91ec8" }, // Nieuwegein
+  { lat: 52.0539, lng: 5.2042, color: "#8b35ff" }, // Bunnik
+  { lat: 52.0907, lng: 5.1214, color: "#16a5ff" }  // Utrecht
 ];
+
+// Route-pad: zelfde punten in de juiste volgorde
+const routePath = stops.map((s) => [s.lat, s.lng]);
+
+function zoomIn() {
+  mapRef.value?.leafletObject?.zoomIn();
+}
+function zoomOut() {
+  mapRef.value?.leafletObject?.zoomOut();
+}
+function fitRoute() {
+  mapRef.value?.leafletObject?.fitBounds(routePath, { padding: [40, 40] });
+}
 </script>
 
 <template>
@@ -195,42 +215,47 @@ const mapPins = [
             </template>
           </v-toolbar>
 
-          <v-sheet class="map-stage flex-grow-1" rounded="0">
-            <div class="d-flex flex-column ga-2 position-absolute pa-3" style="z-index: 2;">
-              <v-btn icon="mdi-plus" size="small" variant="elevated" />
-              <v-btn icon="mdi-minus" size="small" variant="elevated" />
-              <v-btn icon="mdi-arrow-expand-all" size="small" variant="elevated" />
-            </div>
-
-            <v-chip
-              size="x-small"
-              variant="outlined"
-              class="position-absolute"
-              style="top: 12px; right: 12px; z-index: 2;"
+          <div class="flex-grow-1 position-relative">
+            <l-map
+              ref="mapRef"
+              :center="mapCenter"
+              :zoom="mapZoom"
+              :options="{ zoomControl: false, attributionControl: true }"
+              style="height: 100%; width: 100%; z-index: 0;"
             >
-              5 km
-            </v-chip>
-
-            <div class="map-image">
-              <div
-                v-for="(pin, index) in mapPins"
-                :key="index"
-                class="map-pin"
-                :style="{ top: pin.top, left: pin.left, '--pin-color': pin.color }"
+              <l-tile-layer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               />
 
-              <svg class="map-route" viewBox="0 0 1000 700" preserveAspectRatio="none">
-                <path
-                  d="M480 300 L515 360 L565 345 L620 430 L700 535"
-                  fill="none"
-                  stroke="#ff00cc"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="5"
-                />
-              </svg>
+              <l-polyline
+                :lat-lngs="routePath"
+                color="#ff00cc"
+                :weight="5"
+                :opacity="0.9"
+              />
+
+              <l-circle-marker
+                v-for="(stop, index) in stops"
+                :key="index"
+                :lat-lng="[stop.lat, stop.lng]"
+                :radius="8"
+                :color="'#ffffff'"
+                :weight="2"
+                :fill-color="stop.color"
+                :fill-opacity="1"
+              />
+            </l-map>
+
+            <div
+              class="position-absolute d-flex flex-column ga-2"
+              style="top: 12px; left: 12px; z-index: 400;"
+            >
+              <v-btn icon="mdi-plus" size="small" variant="elevated" @click="zoomIn" />
+              <v-btn icon="mdi-minus" size="small" variant="elevated" @click="zoomOut" />
+              <v-btn icon="mdi-arrow-expand-all" size="small" variant="elevated" @click="fitRoute" />
             </div>
-          </v-sheet>
+          </div>
         </div>
       </v-main>
     </v-layout>
