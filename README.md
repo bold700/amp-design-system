@@ -39,14 +39,19 @@ wijziging.
 
 ## Tijdens de workshop (de demo zelf)
 
-Open een terminal in de repo-folder en start Claude:
+Open een terminal en start Claude **vanuit de repo-folder**:
 
 ```bash
-claude
+cd ~/Documents/GitHub/amp-design-system && claude
 ```
 
-Dat is alles. Claude leest automatisch `.claude/CLAUDE.md` met alle
-architectuur-regels, beschikbare componenten en UX-richtlijnen.
+Claude leest `.claude/CLAUDE.md` op basis van zijn startup-werkmap.
+Als je `claude` vanuit je home-folder start (`/Users/nova`), heeft hij
+**geen** project-context en weet hij niet van AMP, Vuetify-regels of
+de view-architectuur. Daarom altijd eerst `cd`.
+
+> 💡 **Check:** na startup toont Claude de actieve werkmap. Die moet
+> eindigen op `/amp-design-system`, niet op `/nova`.
 
 ### Een use case bouwen
 
