@@ -1,194 +1,139 @@
-# AMP Groep Design System — Bouw altijd pixel-perfect
+# AMP Groep — Vuetify-only project
 
-## VERPLICHT: Gebruik altijd het AMP design system
+## VERPLICHT: alles in dit project is Vuetify (Material Design)
 
-Bij ELKE UI-taak (HTML, CSS, component, pagina, dashboard, landing page) geldt:
+Dit is een Vue 3 + Vuetify 3 project. **Schrijf nooit eigen UI-code buiten Vuetify**. Geen custom CSS-klassen voor componenten, geen handgemaakte HTML-controls, geen alternatieve UI-frameworks.
 
-1. **Laad altijd beide CSS-bestanden** als eerste stap, plus Manrope:
-```html
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="amp-tokens.css">
-<link rel="stylesheet" href="amp-components.css">
+Bron-Figma: https://www.figma.com/design/0rmsgLNBJZ7Z2EsvlbAJk3/AMP-Groep-Design-System
+Vuetify docs: https://vuetifyjs.com/en/components/all/
+
+---
+
+## De drie regels
+
+### 1. Componenten = altijd Vuetify
+
+| Wat je nodig hebt | Vuetify-component |
+|-------------------|-------------------|
+| Knop | `<v-btn>` |
+| Tekstinvoer | `<v-text-field>` |
+| Tekstvak | `<v-textarea>` |
+| Dropdown | `<v-select>`, `<v-autocomplete>`, `<v-combobox>` |
+| Checkbox | `<v-checkbox>` |
+| Radio | `<v-radio>` / `<v-radio-group>` |
+| Toggle | `<v-switch>` |
+| Slider | `<v-slider>` / `<v-range-slider>` |
+| Datum | `<v-date-picker>` |
+| Card | `<v-card>` met `<v-card-title>` / `<v-card-text>` / `<v-card-actions>` |
+| Lijst | `<v-list>` met `<v-list-item>` |
+| Tabs | `<v-tabs>` / `<v-tab>` / `<v-window>` / `<v-window-item>` |
+| Modal | `<v-dialog>` |
+| Drawer/sidebar | `<v-navigation-drawer>` |
+| Topbar | `<v-app-bar>` of `<v-toolbar>` |
+| Footer | `<v-footer>` |
+| Layout grid | `<v-container>`, `<v-row>`, `<v-col>` |
+| Badge | `<v-badge>` |
+| Chip/tag | `<v-chip>` |
+| Avatar | `<v-avatar>` |
+| Alert | `<v-alert>` |
+| Snackbar | `<v-snackbar>` |
+| Tooltip | `<v-tooltip>` |
+| Loading | `<v-progress-linear>`, `<v-progress-circular>`, `<v-skeleton-loader>` |
+| Pagination | `<v-pagination>` |
+| Breadcrumbs | `<v-breadcrumbs>` |
+| Expansion/FAQ | `<v-expansion-panels>` |
+| Tabel | `<v-data-table>` of `<v-data-table-server>` |
+| Empty state | `<v-empty-state>` |
+| Iconen | `<v-icon icon="mdi-..." />` (Material Design Icons via @mdi/font) |
+
+> Twijfel? Check https://vuetifyjs.com/en/components/all/ — als het niet bestaat in Vuetify, vraag de gebruiker hoe op te lossen voor je eigen markup verzint.
+
+### 2. Spacing, layout, kleur = altijd Vuetify utility-classes en props
+
+| Wat | Hoe |
+|-----|-----|
+| Padding/margin | `pa-4`, `pa-md-6`, `ma-2`, `mt-8`, `mx-auto`, etc. |
+| Display | `d-flex`, `d-block`, `d-none`, `d-md-flex` |
+| Flex | `align-center`, `justify-space-between`, `flex-column`, `flex-grow-1` |
+| Grid | `<v-container>` + `<v-row>` + `<v-col cols="12" md="6">` |
+| Tekstuitlijning | `text-center`, `text-md-left` |
+| Typografie | `text-h1`–`text-h6`, `text-body-1`, `text-body-2`, `text-caption`, `font-weight-bold` |
+| Kleur | Component-prop: `color="primary"`, `bg-color="surface"` |
+| Kleur in tekst/bg | `class="text-primary"`, `class="bg-surface"` |
+| Elevation | `elevation="2"` prop, of `class="elevation-2"` (0-24) |
+| Border radius | `rounded` / `rounded="lg"` / `rounded="pill"` props |
+| Responsive | breakpoint-prefixes: `sm`, `md`, `lg`, `xl` (bv. `pa-md-6`) |
+
+**Geen handmatige `<style>` blocks** voor layout/spacing/kleur. Alleen als laatste redmiddel — en altijd via theme-tokens, niet hardcoded hex.
+
+### 3. Theming = altijd via `src/plugins/vuetify.js`
+
+Alle kleuren komen uit het Vuetify theme-object. Refereer ze in templates via `color="primary"`, niet via hardcoded hex.
+
+```js
+// src/plugins/vuetify.js — AMP brand
+export const vuetify = createVuetify({
+  theme: {
+    defaultTheme: "amp",
+    themes: {
+      amp: {
+        dark: false,
+        colors: {
+          primary: "#226499",     // AMP corporate blauw (Figma-bron)
+          secondary: "#009688",   // Teal
+          success: "#43a047",
+          warning: "#fb8c00",
+          error: "#d32f2f",
+          info: "#226499",
+          surface: "#ffffff",
+          background: "#f5f5f5"
+        }
+      }
+    }
+  }
+})
 ```
 
-2. **Gebruik bestaande klassen** — nooit opnieuw uitvinden wat al bestaat.
-
-3. **Nooit afwijken van tokens** — geen custom kleuren, spacing, radius of fonts buiten de variabelen hieronder.
+Een nieuwe kleur nodig? Voeg toe aan dit object, gebruik via `color="..."`.
 
 ---
 
-## Design tokens (CSS-variabelen)
+## Verboden (hard nee)
 
-### Kleuren
-```
-/* Surfaces */
---amp-bg: #ffffff              --amp-surface: #ffffff
---amp-surface-2: #f5f5f5       --amp-surface-3: #eeeeee
---amp-border: #e0e0e0          --amp-border-strong: #bdbdbd
-
-/* Text */
---amp-text: #212121            --amp-text-muted: #616161
---amp-text-subtle: #9e9e9e     --amp-text-on-primary: #ffffff
-
-/* Primary (AMP corporate blue) */
---amp-primary: #226499         --amp-primary-hover: #1a4f7a
---amp-primary-active: #143d5e  --amp-primary-light: #CBEAFF
---amp-primary-muted: #e6f2fa
-
-/* Secondary (Teal) */
---amp-secondary: #009688       --amp-secondary-hover: #00796b
---amp-secondary-light: #b2dfdb
-
-/* Semantic */
---amp-success: #43a047         --amp-success-bg: #e8f5e9
---amp-warning: #fb8c00         --amp-warning-bg: #fff3e0
---amp-error: #d32f2f           --amp-error-bg: #ffebee
---amp-info: #226499            --amp-info-bg: #CBEAFF
-```
-
-### Spacing (gebruik altijd deze waarden)
-`4px · 8px · 12px · 16px · 24px · 32px · 48px · 64px · 80px · 96px`
-Variabelen: `--amp-space-1` t/m `--amp-space-24`
-
-### Border radius (Vuetify-stijl, bescheiden)
-`--amp-radius-sm: 4px` · `--amp-radius-md: 6px` · `--amp-radius-lg: 8px` · `--amp-radius-xl: 16px` · `--amp-radius-full: 9999px`
-
-### Elevation (Material-stijl)
-`--amp-elevation-1` t/m `--amp-elevation-4` (subtiel naar diep)
-
-### Typografie
-Font: `Manrope` (altijd via `--amp-font-family`)
-Gewichten: regular(400) · medium(500) · semibold(600) · bold(700) · extrabold(800)
-
-Klassen: `.amp-display` (56px) · `.amp-h1` (40px) · `.amp-h2` (32px) · `.amp-h3` (24px) · `.amp-h4` (20px) · `.amp-body-large` (18px) · `.amp-body` (16px) · `.amp-body-small` (14px) · `.amp-caption` (12px) · `.amp-overline` (11px uppercase)
+❌ **Eigen CSS-klassen voor componenten** — geen `.my-button`, `.sidebar-top`, `.courier-list`
+❌ **Handgemaakte HTML-controls** — geen `<button>`, `<input>`, `<select>` direct in markup. Altijd Vuetify equivalent.
+❌ **Tailwind utility classes** — geen `bg-blue-500`, `flex justify-center`. Gebruik Vuetify-equivalenten.
+❌ **Hardcoded kleuren** — geen `#1e88e5`, `color: red`. Altijd via theme of `color="..."` prop.
+❌ **Andere fonts** — Vuetify gebruikt Roboto by default. Niet zelf Manrope/Inter/Segoe UI laden tenzij expliciet gewijzigd in theme.
+❌ **Andere UI libraries** — geen Bootstrap, Tailwind, Element Plus, Naive UI, Quasar, etc.
+❌ **Custom CSS in `styles.css` voor layout** — `styles.css` bevat alleen html/body reset.
 
 ---
 
-## Component klassen (gebruik exact deze namen)
+## Toegestaan (mits expliciet)
 
-### Primitives
+✅ **Custom CSS** alleen voor zaken die Vuetify niet dekt (bijv. een SVG-pad, een unieke achtergrond-illustratie). Gebruik dan altijd Vuetify theme-tokens via `rgb(var(--v-theme-primary))`.
 
-| Component | Klasse(n) |
-|-----------|-----------|
-| Button | `.amp-btn` + `.amp-btn-{sm\|md\|lg}` + `.amp-btn-{primary\|secondary\|outline\|text\|danger}` (+ `.amp-btn-block` voor full-width) |
-| Tag/Chip | `.amp-tag` (+ `.amp-tag-{primary\|secondary\|success\|warning\|error}`) + `.amp-tag-remove` |
-| Input | `.amp-input-group` > `.amp-input-label` + `.amp-input` (+ `.error`) + `.amp-input-hint` |
-| Textarea | `.amp-textarea` |
-| Select | `.amp-select` (native `<select>` styled) |
-| Checkbox | `.amp-checkbox-wrap` > `.amp-checkbox` (+ `.checked`) |
-| Radio | `.amp-radio-wrap` > `.amp-radio` (+ `.checked`) |
-| Toggle | `.amp-toggle` (+ `.on`, `.disabled`) |
-| Avatar | `.amp-avatar` + `.amp-avatar-{xs\|sm\|md\|lg\|xl}` (24/32/40/56/80px) |
-| Badge | `.amp-badge` + `.amp-badge-{primary\|secondary\|success\|warning\|error\|neutral}` (+ `-subtle` varianten) |
-| Alert | `.amp-alert` + `.amp-alert-{info\|success\|warning\|error}` > `.amp-alert-icon` + `.amp-alert-content` > `.amp-alert-title` + `.amp-alert-body` |
-| Card | `.amp-card` (+ `.amp-card-elevated`) > `.amp-card-title` + `.amp-card-subtitle` |
-| Divider | `.amp-divider` (+ `.amp-divider-vertical`) |
-| Tabs | `.amp-tabs` > `.amp-tab` (+ `.active`) |
-| Modal | `.amp-modal-backdrop` > `.amp-modal` > `.amp-modal-title` + `.amp-modal-body` + `.amp-modal-actions` |
-| Snackbar | `.amp-snackbar` + `.amp-snackbar-action` |
-| Tooltip | `.amp-tooltip-wrap` > trigger + `.amp-tooltip` |
-| Skeleton | `.amp-skeleton` + `.amp-skeleton-{line\|line-sm\|circle\|block}` |
-| Progress | `.amp-progress` (+ `.amp-progress-{sm\|lg\|success\|warning\|error}`) > `.amp-progress-bar` |
-| Pagination | `.amp-pagination` > `.amp-pagination-item` (+ `.active`) |
-| Breadcrumb | `.amp-breadcrumb` > `.amp-breadcrumb-item` (+ `.active`) + `.amp-breadcrumb-sep` |
-| Expansion | `.amp-expansion-panel` (+ `.open`) > `.amp-expansion-header` + `.amp-expansion-icon` + `.amp-expansion-body` |
-
-### App / Dashboard blocks
-
-| Block | Klasse |
-|-------|--------|
-| App shell | `.amp-app-shell` (CSS grid: sidebar + topbar + main) |
-| Sidebar | `.amp-sidebar` > `.amp-sidebar-brand` + `.amp-nav-item` (+ `.active`) > `.amp-nav-icon` |
-| Topbar | `.amp-topbar` + `.amp-topbar-search` + `.amp-topbar-actions` |
-| Page header | `.amp-page-header` > `.amp-page-title` + `.amp-page-subtitle` |
-| Stat grid | `.amp-stat-grid` > `.amp-stat-card` > `.amp-stat-label` + `.amp-stat-value` + `.amp-stat-change` (+ `.up`, `.down`) |
-| Data table | `.amp-data-table` > `<table>` |
-| Empty state | `.amp-empty-state` > `.amp-empty-state-icon` + `.amp-empty-state-title` + `.amp-empty-state-body` |
-
-### Marketing blocks
-
-| Block | Klasse |
-|-------|--------|
-| Section wrapper | `.amp-section` (max-width 1200px) |
-| Eyebrow | `.amp-eyebrow` |
-| Hero | `.amp-block-hero` > h1 + p + `.ctas` |
-| Section header | `.amp-block-section-header` |
-| Feature grid | `.amp-block-feature-grid` > `.amp-feature` > `.amp-feature-icon` + h3 + p |
-| Stats bar | `.amp-block-stats` > `.stat-value` + `.stat-label` |
-| Pricing | `.amp-block-pricing` > `.cards` > `.amp-pricing-card` (+ `.featured`) |
-| CTA block | `.amp-block-cta` |
-| Footer | `.amp-block-footer` > `.footer-grid` + `.copyright` |
-| Logo | `.amp-logo` (+ `.amp-logo-mark`) |
-
----
-
-## Regels (strikt)
-
-- **Geen custom kleuren** buiten de tokens — nooit `#ff0000` of `color: red`
-- **Geen custom spacing** buiten de tokens — nooit `margin: 15px` of `padding: 18px`
-- **Geen custom radius** — nooit `border-radius: 5px`, gebruik `--amp-radius-*`
-- **Altijd Manrope** — nooit Inter, Roboto of een ander lettertype
-- **Geen Tailwind utility-klassen** zoals `bg-blue-500`, `text-gray-700`, etc. Gebruik alleen `.amp-*` klassen of inline styles met CSS-variabelen
-- **Dark mode** werkt automatisch via `prefers-color-scheme` en `[data-theme="dark"]` op `<html>`
-- De bron van waarheid is het Figma-bestand: https://www.figma.com/design/0rmsgLNBJZ7Z2EsvlbAJk3/AMP-Groep-Design-System
-
----
-
-## UX/UI kwaliteitsnormen
-
-Pas deze regels toe bij elk component en elke pagina, naast de design tokens.
-
-### Toegankelijkheid (WCAG AA)
-- Minimale contrastverhouding tekst op achtergrond: **4.5:1** (body), **3:1** (grote tekst, iconen)
-- Elk interactief element heeft een zichtbare **focus state**: `outline` of `box-shadow` in primary-kleur
-- Gebruik altijd semantische HTML: `<button>` voor acties, `<a>` voor navigatie, nooit `<div onclick>`
-- Formuliervelden hebben altijd een gekoppeld `<label>` via `for`/`id`
-- Afbeeldingen krijgen altijd een `alt`-attribuut (leeg `alt=""` bij decoratieve afbeeldingen)
-- Touch targets minimaal **44×44px** op mobiel (input min-height is 44px in dit systeem)
-
-### States — elk interactief element heeft alle states
-- **Default** — rust
-- **Hover** — subtiele achtergrond of kleurverandering (0.15s ease)
-- **Focus** — zichtbaar, nooit `outline: none` zonder alternatief
-- **Active/pressed** — `transform: scale(0.98)` of kleurverdieping
-- **Disabled** — opacity 0.5, cursor not-allowed, niet klikbaar
-- **Loading** — `.amp-skeleton` of `.amp-progress`, nooit een lege of bevroren UI
-
-### Feedback & interactie
-- Elke destructieve actie vraagt een bevestiging (modal of confirm)
-- Formulieren tonen validatiefouten inline via `.amp-input.error` + `.amp-input-hint.error`
-- Succesacties tonen een `.amp-snackbar` of `.amp-alert-success`
-- Laadtijd >300ms toont altijd een loading indicator
-- Lege states gebruiken `.amp-empty-state` met titel, uitleg en CTA
-
-### Responsive
-- Mobile-first: ontwerp voor 375px, schaal op naar desktop
-- Touch targets minimaal 44×44px
-- Geen horizontale scroll op mobiel
-- Tabellen worden op mobiel scrollbaar of omgezet naar lijstitems
-- Tekst nooit kleiner dan 14px op mobiel
-
-### Typografie & leesbaarheid
-- Regelbreedte: maximaal **680px** voor doorlopende tekst
-- Line-height: minimaal 1.5 voor bodytekst
-- Nooit meer dan 2 font-weights op één pagina combineren (uitzondering: stat-cards mogen extrabold)
-- Koppen hebben altijd negatieve letter-spacing (al gedekt in tokens)
-
-### Motion
-- Transities: **0.15s ease** voor micro-interacties (hover, focus)
-- **0.2s ease** voor states die in/uit gaan (toggle, dropdown)
-- **0.3s ease** voor modals, panels, overlays
-- Geen animaties op elementen die tekst tonen (vermindert leesbaarheid)
-- Respecteer `prefers-reduced-motion`: gebruik `@media (prefers-reduced-motion: reduce)` om animaties uit te zetten
+✅ **Component-scoped `<style>`** in een `.vue` bestand voor één-component visuele tweaks die niet via Vuetify-props kunnen. Houd het minimaal.
 
 ---
 
 ## Workflow bij nieuwe taken
 
-1. Lees deze CLAUDE.md volledig
-2. Open bij twijfel `components-overview.html` voor visuele referentie
-3. Bouw de UI met `.amp-*` klassen
-4. Test op 375px en op desktop, in light en dark mode
-5. Geen Tailwind, geen custom hex-codes, geen ander font dan Manrope
+1. Lees deze CLAUDE.md
+2. Check de Vuetify-componentenlijst hierboven — kies de juiste primitive
+3. Bouw met Vuetify-componenten + utility classes + props
+4. Geen custom classes toevoegen, tenzij echt nodig — vraag dan eerst de gebruiker
+5. Test responsive via Vuetify breakpoint-prefixes
+6. Theme-wijzigingen alleen in `src/plugins/vuetify.js`
+
+---
+
+## Quickstart commando's
+
+```bash
+npm install      # eerste keer
+npm run dev      # Vite dev-server op http://localhost:5173
+npm run build    # productie-build naar dist/
+npm run preview  # preview de build
+```

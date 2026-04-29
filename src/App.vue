@@ -69,19 +69,21 @@ const mapPins = [
 
 <template>
   <v-app>
-    <v-layout class="delivery-layout">
-      <v-navigation-drawer class="sidebar" permanent width="360">
-        <v-toolbar density="compact" flat class="sidebar-top">
-          <v-toolbar-title class="sidebar-title">Bezorgers</v-toolbar-title>
+    <v-layout class="min-vh-100">
+      <v-navigation-drawer permanent width="360" color="surface">
+        <v-toolbar density="compact" flat color="surface" class="px-3">
+          <v-toolbar-title class="text-subtitle-1 font-weight-bold">
+            Bezorgers
+          </v-toolbar-title>
           <template #append>
-            <div class="sidebar-stats">
+            <div class="d-flex ga-1">
               <v-chip
                 v-for="stat in courierStats"
                 :key="stat.label"
                 density="comfortable"
                 size="small"
                 variant="outlined"
-                class="mini-stat"
+                class="text-caption"
               >
                 <v-icon :icon="stat.icon" size="14" start />
                 {{ stat.value }}
@@ -90,7 +92,7 @@ const mapPins = [
           </template>
         </v-toolbar>
 
-        <div class="sidebar-controls">
+        <div class="d-flex flex-column ga-2 px-3 pb-3">
           <v-text-field
             density="compact"
             hide-details
@@ -116,12 +118,15 @@ const mapPins = [
           />
         </div>
 
-        <v-list class="courier-list" lines="two" nav>
+        <v-divider />
+
+        <v-list lines="two" nav class="overflow-y-auto pa-0">
           <v-list-item
             v-for="courier in couriers"
             :key="courier.id"
-            :class="{ 'courier-row--active': courier.active }"
+            :active="courier.active"
             rounded="0"
+            class="border-b py-2"
           >
             <template #prepend>
               <v-avatar color="primary" rounded="0" size="28">
@@ -129,24 +134,24 @@ const mapPins = [
               </v-avatar>
             </template>
 
-            <v-list-item-title class="courier-name">
+            <v-list-item-title class="text-body-2 font-weight-medium">
               {{ courier.name }}
             </v-list-item-title>
-            <v-list-item-subtitle class="courier-city">
+            <v-list-item-subtitle class="text-caption">
               {{ courier.city }}
             </v-list-item-subtitle>
 
             <template #append>
-              <span class="courier-id">ID: {{ courier.id }}</span>
+              <span class="text-caption text-medium-emphasis">
+                ID: {{ courier.id }}
+              </span>
             </template>
 
-            <div class="courier-meta">
-              <v-chip size="x-small" variant="text" class="meta-chip">
-                <v-icon icon="mdi-package-variant-closed" size="13" start />
+            <div class="d-flex flex-wrap ga-2 mt-1">
+              <v-chip size="x-small" variant="text" prepend-icon="mdi-package-variant-closed">
                 {{ courier.progress }}
               </v-chip>
-              <v-chip size="x-small" variant="text" class="meta-chip">
-                <v-icon icon="mdi-clock-outline" size="13" start />
+              <v-chip size="x-small" variant="text" prepend-icon="mdi-clock-outline">
                 {{ courier.hours }}
               </v-chip>
             </div>
@@ -156,68 +161,77 @@ const mapPins = [
               size="x-small"
               color="success"
               variant="text"
-              class="courier-status"
+              prepend-icon="mdi-check-circle-outline"
+              class="mt-1"
             >
-              <v-icon icon="mdi-check-circle-outline" size="13" start />
               {{ courier.status }}
             </v-chip>
           </v-list-item>
         </v-list>
       </v-navigation-drawer>
 
-      <v-main class="map-panel">
-        <v-toolbar density="comfortable" flat class="map-header">
-          <div class="map-title">
-            <v-avatar color="primary" rounded="0" size="28">
-              <v-icon icon="mdi-account" size="18" />
-            </v-avatar>
-            <span>AMP Mahmut C</span>
-            <span class="map-title-id">(1742)</span>
-          </div>
+      <v-main class="bg-surface">
+        <div class="d-flex flex-column" style="height: 100dvh;">
+          <v-toolbar density="comfortable" flat color="surface" class="px-4 border-b">
+            <div class="d-flex align-center ga-2">
+              <v-avatar color="primary" rounded="0" size="28">
+                <v-icon icon="mdi-account" size="18" />
+              </v-avatar>
+              <span class="text-h6 font-weight-bold">AMP Mahmut C</span>
+              <span class="text-medium-emphasis">(1742)</span>
+            </div>
 
-          <template #append>
-            <v-btn-toggle
-              v-model="activeMode"
-              mandatory
-              density="comfortable"
-              variant="text"
-              divided
+            <template #append>
+              <v-btn-toggle
+                v-model="activeMode"
+                mandatory
+                density="comfortable"
+                variant="text"
+                divided
+              >
+                <v-btn value="lijst" size="small">Lijst</v-btn>
+                <v-btn value="kaart" size="small">Kaart</v-btn>
+              </v-btn-toggle>
+            </template>
+          </v-toolbar>
+
+          <v-sheet class="map-stage flex-grow-1" rounded="0">
+            <div class="d-flex flex-column ga-2 position-absolute pa-3" style="z-index: 2;">
+              <v-btn icon="mdi-plus" size="small" variant="elevated" />
+              <v-btn icon="mdi-minus" size="small" variant="elevated" />
+              <v-btn icon="mdi-arrow-expand-all" size="small" variant="elevated" />
+            </div>
+
+            <v-chip
+              size="x-small"
+              variant="outlined"
+              class="position-absolute"
+              style="top: 12px; right: 12px; z-index: 2;"
             >
-              <v-btn value="lijst" size="small">LIJST</v-btn>
-              <v-btn value="kaart" size="small">KAART</v-btn>
-            </v-btn-toggle>
-          </template>
-        </v-toolbar>
+              5 km
+            </v-chip>
 
-        <v-sheet class="map-stage" rounded="0">
-          <div class="map-controls">
-            <v-btn icon="mdi-plus" size="small" variant="elevated" />
-            <v-btn icon="mdi-minus" size="small" variant="elevated" />
-            <v-btn icon="mdi-arrow-expand-all" size="small" variant="elevated" />
-          </div>
-
-          <v-chip size="x-small" variant="outlined" class="map-scaler">5 km</v-chip>
-
-          <div class="map-image">
-            <div
-              v-for="(pin, index) in mapPins"
-              :key="index"
-              class="map-pin"
-              :style="{ top: pin.top, left: pin.left, '--pin-color': pin.color }"
-            />
-
-            <svg class="map-route" viewBox="0 0 1000 700" preserveAspectRatio="none">
-              <path
-                d="M480 300 L515 360 L565 345 L620 430 L700 535"
-                fill="none"
-                stroke="#ff00cc"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="5"
+            <div class="map-image">
+              <div
+                v-for="(pin, index) in mapPins"
+                :key="index"
+                class="map-pin"
+                :style="{ top: pin.top, left: pin.left, '--pin-color': pin.color }"
               />
-            </svg>
-          </div>
-        </v-sheet>
+
+              <svg class="map-route" viewBox="0 0 1000 700" preserveAspectRatio="none">
+                <path
+                  d="M480 300 L515 360 L565 345 L620 430 L700 535"
+                  fill="none"
+                  stroke="#ff00cc"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="5"
+                />
+              </svg>
+            </div>
+          </v-sheet>
+        </div>
       </v-main>
     </v-layout>
   </v-app>
