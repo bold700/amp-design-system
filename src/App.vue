@@ -158,14 +158,11 @@ async function selectFromMap(courierId) {
     <!-- App bar boven alles: hoog-niveau navigatie -->
     <v-app-bar
       color="primary"
-      density="compact"
       :elevation="2"
-      :height="48"
+      :height="56"
     >
       <v-app-bar-nav-icon icon="mdi-menu" />
-      <v-app-bar-title class="text-h6 font-weight-regular">
-        OMS
-      </v-app-bar-title>
+      <v-app-bar-title>OMS</v-app-bar-title>
       <template #append>
         <v-btn icon="mdi-heart-outline" variant="text" />
         <v-btn icon="mdi-magnify" variant="text" />
@@ -176,7 +173,7 @@ async function selectFromMap(courierId) {
     <v-main>
       <div
         class="position-relative"
-        style="height: calc(100dvh - 48px); overflow: hidden;"
+        style="height: calc(100dvh - 56px); overflow: hidden;"
       >
         <!-- Map vult de hele achtergrond -->
         <div class="position-absolute" style="inset: 0; z-index: 0;">
