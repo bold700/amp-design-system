@@ -7,6 +7,9 @@ import CourierCard from "./components/CourierCard.vue";
 
 const mapRef = ref(null);
 
+// Panel zichtbaarheid (toggle via collapse-knop)
+const panelVisible = ref(true);
+
 // Filter / sort state
 const searchQuery = ref("");
 const sortBy = ref("Naam");
@@ -109,6 +112,9 @@ async function onMapReady() {
   mapRef.value?.leafletObject?.invalidateSize();
 }
 
+// Linker padding houdt panel-ruimte vrij. Als panel verborgen is: gewoon 60px.
+const leftPadding = computed(() => (panelVisible.value ? 420 : 60));
+
 watch(selectedCourier, async (courier) => {
   await nextTick();
   const map = mapRef.value?.leafletObject;
@@ -116,11 +122,20 @@ watch(selectedCourier, async (courier) => {
   if (courier) {
     const bounds = courier.stops.map((s) => [s.lat, s.lng]);
     if (bounds.length > 0) {
-      map.fitBounds(bounds, { padding: [60, 60], paddingTopLeft: [420, 60] });
+      map.fitBounds(bounds, {
+        padding: [60, 60],
+        paddingTopLeft: [leftPadding.value, 60]
+      });
     }
   } else {
     map.setView(defaultCenter, defaultZoom);
   }
+});
+
+// Map size invalideren als het panel toggle-t (anders rendert tile-area scheef)
+watch(panelVisible, async () => {
+  await nextTick();
+  setTimeout(() => mapRef.value?.leafletObject?.invalidateSize(), 250);
 });
 
 function zoomIn() {
@@ -136,7 +151,10 @@ function fitView() {
     ? selectedCourier.value.stops.map((s) => [s.lat, s.lng])
     : currentLocations.value.map((l) => [l.lat, l.lng]);
   if (points.length) {
-    map.fitBounds(points, { padding: [60, 60], paddingTopLeft: [420, 60] });
+    map.fitBounds(points, {
+      padding: [60, 60],
+      paddingTopLeft: [leftPadding.value, 60]
+    });
   }
 }
 
@@ -267,13 +285,28 @@ async function selectFromMap(courierId) {
           </l-map>
         </div>
 
+        <!-- Open-knop wanneer panel verborgen is -->
+        <v-slide-x-transition>
+          <v-btn
+            v-if="!panelVisible"
+            class="position-absolute"
+            style="top: 16px; left: 16px; z-index: 500;"
+            icon="mdi-menu"
+            color="surface"
+            :elevation="3"
+            @click="panelVisible = true"
+          />
+        </v-slide-x-transition>
+
         <!-- Floating panel links -->
-        <v-card
-          class="position-absolute d-flex flex-column"
-          style="top: 16px; left: 16px; bottom: 16px; width: 390px; z-index: 500;"
-          rounded="lg"
-          :elevation="3"
-        >
+        <v-slide-x-transition>
+          <v-card
+            v-if="panelVisible"
+            class="position-absolute d-flex flex-column"
+            style="top: 16px; left: 16px; bottom: 16px; width: 390px; z-index: 500;"
+            rounded="lg"
+            :elevation="3"
+          >
           <!-- Panel header -->
           <div class="d-flex align-center px-4 py-3 flex-shrink-0">
             <span class="text-h6 font-weight-medium">
@@ -292,6 +325,7 @@ async function selectFromMap(courierId) {
               icon="mdi-unfold-less-vertical"
               size="small"
               variant="tonal"
+              @click="panelVisible = false"
             />
           </div>
 
@@ -356,7 +390,8 @@ async function selectFromMap(courierId) {
               Geen bezorgers gevonden
             </div>
           </div>
-        </v-card>
+          </v-card>
+        </v-slide-x-transition>
 
         <!-- Map controls rechts -->
         <div
