@@ -2,10 +2,9 @@
 import { ref, computed, watch, nextTick } from "vue";
 import { LMap, LTileLayer, LCircleMarker, LPolyline } from "@vue-leaflet/vue-leaflet";
 import "leaflet/dist/leaflet.css";
-import { couriers, courierStats, depots } from "./data/couriers.js";
+import { couriers, depots } from "./data/couriers.js";
 import CourierCard from "./components/CourierCard.vue";
 
-const activeMode = ref("kaart");
 const mapRef = ref(null);
 
 // Filter / sort state
@@ -13,7 +12,7 @@ const searchQuery = ref("");
 const sortBy = ref("Naam");
 const depotFilter = ref("Alle depots");
 
-// Beschikbare depot-opties (incl. "Alle depots")
+// Beschikbare depot-opties
 const depotOptions = computed(() => [
   "Alle depots",
   ...depots.map((d) => d.name).sort()
@@ -56,7 +55,7 @@ const filteredCouriers = computed(() => {
   return sorted;
 });
 
-// Selectie via v-list v-model:selected (array van id's)
+// Selectie via v-list v-model:selected
 const selectedIds = ref([]);
 const selectedCourier = computed(() =>
   selectedIds.value.length
@@ -64,12 +63,11 @@ const selectedCourier = computed(() =>
     : null
 );
 
-// Map center default = Houten regio
+// Map default
 const defaultCenter = [52.0314, 5.1681];
 const defaultZoom = 11;
 
-// Lijst van huidige posities voor de overview-modus
-// Volgt het filter zodat de kaart synchroon loopt met de sidebar
+// Huidige posities (volgt filter)
 const currentLocations = computed(() =>
   filteredCouriers.value.map((c) => ({
     id: c.id,
@@ -79,18 +77,18 @@ const currentLocations = computed(() =>
   }))
 );
 
-// Voor de geselecteerde bezorger: route opgesplitst in done en pending segments
+// Geselecteerde route
 const doneRoute = computed(() => {
   if (!selectedCourier.value) return [];
-  const stops = selectedCourier.value.stops.filter((s) => s.done);
-  return stops.map((s) => [s.lat, s.lng]);
+  return selectedCourier.value.stops
+    .filter((s) => s.done)
+    .map((s) => [s.lat, s.lng]);
 });
 
 const pendingRoute = computed(() => {
   if (!selectedCourier.value) return [];
   const all = selectedCourier.value.stops;
   const lastDoneIdx = all.findLastIndex((s) => s.done);
-  // Begin pending route bij laatst gedane stop zodat het visueel doorloopt
   const start = lastDoneIdx >= 0 ? lastDoneIdx : 0;
   return all.slice(start).map((s) => [s.lat, s.lng]);
 });
@@ -111,7 +109,6 @@ async function onMapReady() {
   mapRef.value?.leafletObject?.invalidateSize();
 }
 
-// Wanneer een bezorger geselecteerd wordt: kaart inzoomen op zijn route
 watch(selectedCourier, async (courier) => {
   await nextTick();
   const map = mapRef.value?.leafletObject;
@@ -119,7 +116,7 @@ watch(selectedCourier, async (courier) => {
   if (courier) {
     const bounds = courier.stops.map((s) => [s.lat, s.lng]);
     if (bounds.length > 0) {
-      map.fitBounds(bounds, { padding: [40, 40] });
+      map.fitBounds(bounds, { padding: [60, 60], paddingTopLeft: [420, 60] });
     }
   } else {
     map.setView(defaultCenter, defaultZoom);
@@ -135,12 +132,11 @@ function zoomOut() {
 function fitView() {
   const map = mapRef.value?.leafletObject;
   if (!map) return;
-  if (selectedCourier.value) {
-    const bounds = selectedCourier.value.stops.map((s) => [s.lat, s.lng]);
-    map.fitBounds(bounds, { padding: [40, 40] });
-  } else {
-    const bounds = currentLocations.value.map((l) => [l.lat, l.lng]);
-    map.fitBounds(bounds, { padding: [40, 40] });
+  const points = selectedCourier.value
+    ? selectedCourier.value.stops.map((s) => [s.lat, s.lng])
+    : currentLocations.value.map((l) => [l.lat, l.lng]);
+  if (points.length) {
+    map.fitBounds(points, { padding: [60, 60], paddingTopLeft: [420, 60] });
   }
 }
 
@@ -151,39 +147,154 @@ function clearSelection() {
 
 <template>
   <v-app>
-    <v-layout class="min-vh-100">
-      <v-navigation-drawer permanent width="360" color="surface">
-        <div
-          class="position-sticky bg-surface"
-          style="top: 0; z-index: 2;"
-        >
-          <v-toolbar density="compact" flat color="surface" class="px-3">
-            <v-toolbar-title class="text-subtitle-1 font-weight-bold">
-              Bezorgers
-            </v-toolbar-title>
-            <template #append>
-              <div class="d-flex ga-1">
-                <v-chip
-                  v-for="stat in courierStats"
-                  :key="stat.label"
-                  density="comfortable"
-                  size="small"
-                  variant="outlined"
-                  class="text-caption"
-                >
-                  <v-icon :icon="stat.icon" size="14" start />
-                  {{ stat.value }}
-                </v-chip>
-              </div>
-            </template>
-          </v-toolbar>
+    <!-- App bar boven alles: hoog-niveau navigatie -->
+    <v-app-bar
+      color="primary"
+      density="compact"
+      :elevation="2"
+      :height="48"
+    >
+      <v-app-bar-nav-icon icon="mdi-menu" />
+      <v-app-bar-title class="text-h6 font-weight-regular">
+        OMS
+      </v-app-bar-title>
+      <template #append>
+        <v-btn icon="mdi-heart-outline" variant="text" />
+        <v-btn icon="mdi-magnify" variant="text" />
+        <v-btn icon="mdi-dots-vertical" variant="text" />
+      </template>
+    </v-app-bar>
 
-          <div class="d-flex flex-column ga-2 px-3 pb-3">
+    <v-main>
+      <div
+        class="position-relative"
+        style="height: calc(100dvh - 48px); overflow: hidden;"
+      >
+        <!-- Map vult de hele achtergrond -->
+        <div class="position-absolute" style="inset: 0; z-index: 0;">
+          <l-map
+            ref="mapRef"
+            :center="defaultCenter"
+            :zoom="defaultZoom"
+            :use-global-leaflet="false"
+            :options="{ zoomControl: false, attributionControl: true }"
+            style="height: 100%; width: 100%;"
+            @ready="onMapReady"
+          >
+            <l-tile-layer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="&copy; OpenStreetMap"
+            />
+
+            <!-- Depots: secondary teal, altijd zichtbaar -->
+            <l-circle-marker
+              v-for="depot in depots"
+              :key="`depot-${depot.name}`"
+              :lat-lng="[depot.lat, depot.lng]"
+              :radius="10"
+              color="#ffffff"
+              :weight="3"
+              fill-color="#009688"
+              :fill-opacity="1"
+            />
+
+            <!-- Overzicht: huidige posities (volgt filter) -->
+            <template v-if="!selectedCourier">
+              <l-circle-marker
+                v-for="loc in currentLocations"
+                :key="loc.id"
+                :lat-lng="[loc.lat, loc.lng]"
+                :radius="6"
+                color="#ffffff"
+                :weight="2"
+                fill-color="#226499"
+                :fill-opacity="1"
+              />
+            </template>
+
+            <!-- Geselecteerde route -->
+            <template v-else>
+              <l-polyline
+                :lat-lngs="doneRoute"
+                color="#226499"
+                :weight="4"
+                :opacity="0.95"
+              />
+              <l-polyline
+                :lat-lngs="pendingRoute"
+                color="#226499"
+                :weight="3"
+                :opacity="0.5"
+                dash-array="6 8"
+              />
+              <l-circle-marker
+                v-for="(stop, i) in doneStops"
+                :key="`done-${i}`"
+                :lat-lng="[stop.lat, stop.lng]"
+                :radius="5"
+                color="#ffffff"
+                :weight="1.5"
+                fill-color="#226499"
+                :fill-opacity="1"
+              />
+              <l-circle-marker
+                v-for="(stop, i) in pendingStops"
+                :key="`pending-${i}`"
+                :lat-lng="[stop.lat, stop.lng]"
+                :radius="5"
+                color="#226499"
+                :weight="2"
+                fill-color="#ffffff"
+                :fill-opacity="1"
+              />
+              <l-circle-marker
+                v-if="selectedCourier.currentLocation"
+                :lat-lng="selectedCourier.currentLocation"
+                :radius="9"
+                color="#ffffff"
+                :weight="3"
+                fill-color="#e91ec8"
+                :fill-opacity="1"
+              />
+            </template>
+          </l-map>
+        </div>
+
+        <!-- Floating panel links -->
+        <v-card
+          class="position-absolute d-flex flex-column"
+          style="top: 16px; left: 16px; bottom: 16px; width: 390px; z-index: 500;"
+          rounded="lg"
+          :elevation="3"
+        >
+          <!-- Panel header -->
+          <div class="d-flex align-center px-4 py-3 flex-shrink-0">
+            <span class="text-h6 font-weight-medium">
+              {{ selectedCourier ? selectedCourier.name : "Bezorgers" }}
+            </span>
+            <v-spacer />
+            <v-btn
+              v-if="selectedCourier"
+              icon="mdi-arrow-left"
+              size="small"
+              variant="tonal"
+              @click="clearSelection"
+            />
+            <v-btn
+              v-else
+              icon="mdi-unfold-less-vertical"
+              size="small"
+              variant="tonal"
+            />
+          </div>
+
+          <!-- Filter form -->
+          <div class="d-flex flex-column ga-3 px-4 pb-4 flex-shrink-0">
             <v-text-field
               v-model="searchQuery"
               density="compact"
               hide-details
-              placeholder="Zoeken naar bezorgers"
+              placeholder="Search"
               prepend-inner-icon="mdi-magnify"
               variant="outlined"
               clearable
@@ -207,249 +318,103 @@ function clearSelection() {
           </div>
 
           <v-divider />
-        </div>
 
-        <v-list
-          v-model:selected="selectedIds"
-          nav
-          class="pa-2"
-        >
-          <CourierCard
-            v-for="courier in filteredCouriers"
-            :key="courier.id"
-            :courier="courier"
-          />
-
-          <v-list-item
-            v-if="filteredCouriers.length === 0"
-            class="text-center py-6"
+          <!-- Scrollable courier-lijst -->
+          <div
+            class="flex-grow-1 overflow-y-auto px-4 py-3"
+            style="min-height: 0;"
           >
-            <v-icon
-              icon="mdi-account-search-outline"
-              size="32"
-              color="medium-emphasis"
-              class="mb-2"
-            />
-            <div class="text-body-2 text-medium-emphasis">
-              Geen bezorgers gevonden
-            </div>
-          </v-list-item>
-        </v-list>
-      </v-navigation-drawer>
-
-      <v-main class="bg-surface">
-        <div class="d-flex flex-column" style="height: 100dvh;">
-          <v-toolbar density="comfortable" flat color="surface" class="px-4 border-b">
-            <div class="d-flex align-center ga-2">
-              <v-avatar color="primary" rounded="0" size="28">
-                <v-icon
-                  :icon="selectedCourier ? 'mdi-account' : 'mdi-account-group'"
-                  size="18"
-                />
-              </v-avatar>
-              <span v-if="selectedCourier" class="text-h6 font-weight-bold">
-                {{ selectedCourier.name }}
-              </span>
-              <span v-if="selectedCourier" class="text-medium-emphasis">
-                ({{ selectedCourier.id }})
-              </span>
-              <span v-else class="text-h6 font-weight-bold">
-                Live overzicht
-              </span>
-              <span v-if="!selectedCourier" class="text-medium-emphasis">
-                ({{ filteredCouriers.length }} van {{ couriers.length }} bezorgers)
-              </span>
-
-              <v-btn
-                v-if="selectedCourier"
-                size="small"
-                variant="text"
-                prepend-icon="mdi-arrow-left"
-                class="ml-2"
-                @click="clearSelection"
-              >
-                Terug
-              </v-btn>
-            </div>
-
-            <template #append>
-              <v-btn-toggle
-                v-model="activeMode"
-                mandatory
-                density="comfortable"
-                variant="text"
-                divided
-              >
-                <v-btn value="lijst" size="small">Lijst</v-btn>
-                <v-btn value="kaart" size="small">Kaart</v-btn>
-              </v-btn-toggle>
-            </template>
-          </v-toolbar>
-
-          <div class="flex-grow-1 position-relative" style="min-height: 0;">
-            <div class="position-absolute" style="inset: 0;">
-              <l-map
-                ref="mapRef"
-                :center="defaultCenter"
-                :zoom="defaultZoom"
-                :use-global-leaflet="false"
-                :options="{ zoomControl: false, attributionControl: true }"
-                style="height: 100%; width: 100%;"
-                @ready="onMapReady"
-              >
-                <l-tile-layer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution="&copy; OpenStreetMap"
-                />
-
-                <!-- Depots: altijd zichtbaar in secondary teal -->
-                <l-circle-marker
-                  v-for="depot in depots"
-                  :key="`depot-${depot.name}`"
-                  :lat-lng="[depot.lat, depot.lng]"
-                  :radius="10"
-                  color="#ffffff"
-                  :weight="3"
-                  fill-color="#009688"
-                  :fill-opacity="1"
-                />
-
-                <!-- Overzicht: huidige posities (volgt filter) -->
-                <template v-if="!selectedCourier">
-                  <l-circle-marker
-                    v-for="loc in currentLocations"
-                    :key="loc.id"
-                    :lat-lng="[loc.lat, loc.lng]"
-                    :radius="6"
-                    color="#ffffff"
-                    :weight="2"
-                    fill-color="#226499"
-                    :fill-opacity="1"
-                  />
-                </template>
-
-                <!-- Geselecteerde bezorger: route + stops + huidige positie -->
-                <template v-else>
-                  <!-- Gedane segmenten: solid primary -->
-                  <l-polyline
-                    :lat-lngs="doneRoute"
-                    color="#226499"
-                    :weight="4"
-                    :opacity="0.95"
-                  />
-
-                  <!-- Nog te doen: dashed primary, halftransparant -->
-                  <l-polyline
-                    :lat-lngs="pendingRoute"
-                    color="#226499"
-                    :weight="3"
-                    :opacity="0.5"
-                    dash-array="6 8"
-                  />
-
-                  <!-- Gedane stops: gevuld primary -->
-                  <l-circle-marker
-                    v-for="(stop, i) in doneStops"
-                    :key="`done-${i}`"
-                    :lat-lng="[stop.lat, stop.lng]"
-                    :radius="5"
-                    color="#ffffff"
-                    :weight="1.5"
-                    fill-color="#226499"
-                    :fill-opacity="1"
-                  />
-
-                  <!-- Nog te doen: outlined -->
-                  <l-circle-marker
-                    v-for="(stop, i) in pendingStops"
-                    :key="`pending-${i}`"
-                    :lat-lng="[stop.lat, stop.lng]"
-                    :radius="5"
-                    color="#226499"
-                    :weight="2"
-                    fill-color="#ffffff"
-                    :fill-opacity="1"
-                  />
-
-                  <!-- Huidige positie: grotere pin -->
-                  <l-circle-marker
-                    v-if="selectedCourier.currentLocation"
-                    :lat-lng="selectedCourier.currentLocation"
-                    :radius="9"
-                    color="#ffffff"
-                    :weight="3"
-                    fill-color="#e91ec8"
-                    :fill-opacity="1"
-                  />
-                </template>
-              </l-map>
-            </div>
+            <v-list
+              v-model:selected="selectedIds"
+              class="pa-0"
+              bg-color="transparent"
+              nav
+            >
+              <CourierCard
+                v-for="courier in filteredCouriers"
+                :key="courier.id"
+                :courier="courier"
+              />
+            </v-list>
 
             <div
-              class="position-absolute d-flex flex-column ga-2"
-              style="top: 12px; left: 12px; z-index: 400;"
+              v-if="filteredCouriers.length === 0"
+              class="text-center py-8 text-body-2 text-medium-emphasis"
             >
-              <v-btn icon="mdi-plus" size="small" variant="elevated" @click="zoomIn" />
-              <v-btn icon="mdi-minus" size="small" variant="elevated" @click="zoomOut" />
-              <v-btn icon="mdi-arrow-expand-all" size="small" variant="elevated" @click="fitView" />
+              <v-icon
+                icon="mdi-account-search-outline"
+                size="32"
+                class="mb-2 d-block mx-auto"
+              />
+              Geen bezorgers gevonden
             </div>
-
-            <!-- Legenda: altijd zichtbaar -->
-            <v-card
-              class="position-absolute"
-              style="bottom: 24px; right: 16px; z-index: 400;"
-              variant="elevated"
-              rounded="lg"
-            >
-              <v-card-text class="py-3 px-4">
-                <div class="d-flex flex-column ga-2 text-caption">
-                  <div class="d-flex align-center ga-2">
-                    <span
-                      class="d-inline-block rounded-circle"
-                      style="width: 12px; height: 12px; background: #009688; border: 2px solid #fff; box-shadow: 0 0 0 1px #009688;"
-                    />
-                    Depot ({{ depots.length }})
-                  </div>
-
-                  <template v-if="!selectedCourier">
-                    <div class="d-flex align-center ga-2">
-                      <span
-                        class="d-inline-block rounded-circle"
-                        style="width: 10px; height: 10px; background: #226499; border: 1.5px solid #fff; box-shadow: 0 0 0 1px #226499;"
-                      />
-                      Bezorger ({{ currentLocations.length }})
-                    </div>
-                  </template>
-
-                  <template v-else>
-                    <div class="d-flex align-center ga-2">
-                      <span
-                        class="d-inline-block rounded-circle"
-                        style="width: 10px; height: 10px; background: #226499; border: 1.5px solid #fff; box-shadow: 0 0 0 1px #226499;"
-                      />
-                      {{ doneStops.length }} gedaan
-                    </div>
-                    <div class="d-flex align-center ga-2">
-                      <span
-                        class="d-inline-block rounded-circle"
-                        style="width: 10px; height: 10px; background: #fff; border: 2px solid #226499;"
-                      />
-                      {{ pendingStops.length }} nog te doen
-                    </div>
-                    <div class="d-flex align-center ga-2">
-                      <span
-                        class="d-inline-block rounded-circle"
-                        style="width: 12px; height: 12px; background: #e91ec8; border: 2px solid #fff; box-shadow: 0 0 0 1px #e91ec8;"
-                      />
-                      Huidige positie
-                    </div>
-                  </template>
-                </div>
-              </v-card-text>
-            </v-card>
           </div>
+        </v-card>
+
+        <!-- Map controls rechts -->
+        <div
+          class="position-absolute d-flex flex-column ga-2"
+          style="top: 16px; right: 16px; z-index: 400;"
+        >
+          <v-btn icon="mdi-plus" size="small" variant="elevated" @click="zoomIn" />
+          <v-btn icon="mdi-minus" size="small" variant="elevated" @click="zoomOut" />
+          <v-btn icon="mdi-arrow-expand-all" size="small" variant="elevated" @click="fitView" />
         </div>
-      </v-main>
-    </v-layout>
+
+        <!-- Legenda -->
+        <v-card
+          class="position-absolute"
+          style="bottom: 16px; right: 16px; z-index: 400;"
+          variant="elevated"
+          rounded="lg"
+        >
+          <v-card-text class="py-3 px-4">
+            <div class="d-flex flex-column ga-2 text-caption">
+              <div class="d-flex align-center ga-2">
+                <span
+                  class="d-inline-block rounded-circle"
+                  style="width: 12px; height: 12px; background: #009688; border: 2px solid #fff; box-shadow: 0 0 0 1px #009688;"
+                />
+                Depot ({{ depots.length }})
+              </div>
+
+              <template v-if="!selectedCourier">
+                <div class="d-flex align-center ga-2">
+                  <span
+                    class="d-inline-block rounded-circle"
+                    style="width: 10px; height: 10px; background: #226499; border: 1.5px solid #fff; box-shadow: 0 0 0 1px #226499;"
+                  />
+                  Bezorger ({{ currentLocations.length }})
+                </div>
+              </template>
+
+              <template v-else>
+                <div class="d-flex align-center ga-2">
+                  <span
+                    class="d-inline-block rounded-circle"
+                    style="width: 10px; height: 10px; background: #226499; border: 1.5px solid #fff; box-shadow: 0 0 0 1px #226499;"
+                  />
+                  {{ doneStops.length }} gedaan
+                </div>
+                <div class="d-flex align-center ga-2">
+                  <span
+                    class="d-inline-block rounded-circle"
+                    style="width: 10px; height: 10px; background: #fff; border: 2px solid #226499;"
+                  />
+                  {{ pendingStops.length }} nog te doen
+                </div>
+                <div class="d-flex align-center ga-2">
+                  <span
+                    class="d-inline-block rounded-circle"
+                    style="width: 12px; height: 12px; background: #e91ec8; border: 2px solid #fff; box-shadow: 0 0 0 1px #e91ec8;"
+                  />
+                  Huidige positie
+                </div>
+              </template>
+            </div>
+          </v-card-text>
+        </v-card>
+      </div>
+    </v-main>
   </v-app>
 </template>
