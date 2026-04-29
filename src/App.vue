@@ -26,8 +26,11 @@ const depotOptions = computed(() => [
 const filteredCouriers = computed(() => {
   let list = couriers;
 
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.trim().toLowerCase();
+  // searchQuery kan null worden via clearable; defensive check
+  const rawQuery = searchQuery.value;
+  const q = typeof rawQuery === "string" ? rawQuery.trim().toLowerCase() : "";
+
+  if (q) {
     list = list.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
