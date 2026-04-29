@@ -127,6 +127,16 @@ export const couriers = rawCouriers.map((c) => {
   return { ...c, depot, stops, currentLocation };
 });
 
+// Depots = unieke steden waar bezorgers vandaan komen, met coords
+export const depots = Object.entries(cityCoords)
+  .filter(([city]) => city !== "Onbekend")
+  .map(([city, coords]) => ({
+    name: city,
+    lat: coords[0],
+    lng: coords[1],
+    courierCount: couriers.filter((c) => c.city === city).length
+  }));
+
 // Stats afgeleid van de bezorgers-array
 export const courierStats = [
   { label: "Bezorgers", value: String(couriers.length), icon: "mdi-account-group" },
