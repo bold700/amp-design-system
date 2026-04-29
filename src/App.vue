@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick } from "vue";
 import { LMap, LTileLayer, LCircleMarker, LPolyline } from "@vue-leaflet/vue-leaflet";
 import "leaflet/dist/leaflet.css";
 import { couriers, courierStats } from "./data/couriers.js";
+import CourierCard from "./components/CourierCard.vue";
 
 const activeMode = ref("kaart");
 const mapRef = ref(null);
@@ -154,56 +155,14 @@ function clearSelection() {
 
         <v-list
           v-model:selected="selectedIds"
-          lines="two"
           nav
-          class="overflow-y-auto pa-0"
+          class="overflow-y-auto pa-2"
         >
-          <v-list-item
+          <CourierCard
             v-for="courier in couriers"
             :key="courier.id"
-            :value="courier.id"
-            rounded="0"
-            class="border-b py-2"
-          >
-            <template #prepend>
-              <v-avatar color="primary" rounded="0" size="28">
-                <v-icon icon="mdi-account" size="18" />
-              </v-avatar>
-            </template>
-
-            <v-list-item-title class="text-body-2 font-weight-medium">
-              {{ courier.name }}
-            </v-list-item-title>
-            <v-list-item-subtitle class="text-caption">
-              {{ courier.city }}
-            </v-list-item-subtitle>
-
-            <template #append>
-              <span class="text-caption text-medium-emphasis">
-                ID: {{ courier.id }}
-              </span>
-            </template>
-
-            <div class="d-flex flex-wrap ga-2 mt-1">
-              <v-chip size="x-small" variant="text" prepend-icon="mdi-package-variant-closed">
-                {{ courier.progress }}
-              </v-chip>
-              <v-chip size="x-small" variant="text" prepend-icon="mdi-clock-outline">
-                {{ courier.hours }}
-              </v-chip>
-            </div>
-
-            <v-chip
-              v-if="courier.status"
-              size="x-small"
-              color="success"
-              variant="text"
-              prepend-icon="mdi-check-circle-outline"
-              class="mt-1"
-            >
-              {{ courier.status }}
-            </v-chip>
-          </v-list-item>
+            :courier="courier"
+          />
         </v-list>
       </v-navigation-drawer>
 
