@@ -35,6 +35,7 @@ const statusIcon = computed(() => {
 <template>
   <v-list-item
     :value="courier.id"
+    :data-courier-id="courier.id"
     rounded="lg"
     active-color="primary"
     class="mb-2 pa-3"

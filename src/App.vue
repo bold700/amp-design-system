@@ -143,6 +143,14 @@ function fitView() {
 function clearSelection() {
   selectedIds.value = [];
 }
+
+async function selectFromMap(courierId) {
+  selectedIds.value = [courierId];
+  await nextTick();
+  // Scroll de bijbehorende card in beeld in het panel
+  const el = document.querySelector(`[data-courier-id="${courierId}"]`);
+  el?.scrollIntoView({ behavior: "smooth", block: "center" });
+}
 </script>
 
 <template>
@@ -209,6 +217,8 @@ function clearSelection() {
                 :weight="2"
                 fill-color="#226499"
                 :fill-opacity="1"
+                :options="{ bubblingMouseEvents: false }"
+                @click="selectFromMap(loc.id)"
               />
             </template>
 
