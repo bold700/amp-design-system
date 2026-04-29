@@ -9,7 +9,7 @@ Vuetify docs: https://vuetifyjs.com/en/components/all/
 
 ---
 
-## Eenmalig: setup
+## Eerste keer setup (eenmalig per machine)
 
 ```bash
 git clone https://github.com/bold700/amp-design-system.git
@@ -17,42 +17,38 @@ cd amp-design-system
 npm install
 ```
 
-Vereisten: Node.js 18+ en [Claude Code CLI](https://docs.claude.com/en/docs/claude-code) geïnstalleerd
+Vereisten: Node.js 18+ en [Claude Code CLI](https://docs.claude.com/en/docs/claude-code)
 (`npm install -g @anthropic-ai/claude-code`).
 
 ---
 
-## Workshop starten — drie stappen
+## Voor de workshop (klaarzetten — vooraf doen)
 
-### Stap 1 — open de repo
+Start de dev-server en laat hem doorlopen tijdens de hele workshop:
 
 ```bash
 cd ~/Documents/GitHub/amp-design-system
-```
-
-### Stap 2 — start de dev-server (Terminal-venster #1)
-
-```bash
 npm run dev
 ```
 
-Vite draait nu op http://localhost:5173. Pagina ververst automatisch
-bij elke wijziging.
+Vite draait dan op http://localhost:5173. Open het browser-venster en
+laat het open staan. Vite ververst de pagina automatisch bij elke
+wijziging.
 
-### Stap 3 — start Claude (Terminal-venster #2)
+---
 
-Open een **nieuw Terminal-venster of tab** (`⌘N` of `⌘T`) en navigeer
-naar dezelfde repo:
+## Tijdens de workshop (de demo zelf)
+
+Open een terminal in de repo-folder en start Claude:
 
 ```bash
-cd ~/Documents/GitHub/amp-design-system
 claude
 ```
 
-Claude leest automatisch `.claude/CLAUDE.md` met alle architectuur-regels,
-beschikbare componenten en UX-richtlijnen.
+Dat is alles. Claude leest automatisch `.claude/CLAUDE.md` met alle
+architectuur-regels, beschikbare componenten en UX-richtlijnen.
 
-### Stap 4 — bouw een use case
+### Een use case bouwen
 
 Plak een use-case-prompt in Claude. Voorbeelden in
 [`docs/USE-CASES.md`](docs/USE-CASES.md). Bijvoorbeeld:
