@@ -14,19 +14,59 @@ const cityCoords = {
   Onbekend:   [52.0314, 5.1681]
 };
 
+// Pool van Nederlandse straatnamen voor adres-generatie
+const streets = [
+  "Hoofdstraat", "Dorpsstraat", "Kerkstraat", "Schoolstraat",
+  "Wilhelminalaan", "Beatrixlaan", "Julianaweg", "Stationsweg",
+  "Molenstraat", "Bakkerstraat", "Lange Straat", "Korte Straat",
+  "Marktplein", "Singel", "Brink", "Nieuwstraat",
+  "Oosterhof", "Westwal", "Houtensepad", "Vlierhof",
+  "Kastanjelaan", "Eikenlaan", "Berkenweg", "Lindelaan"
+];
+
+function parseTime(t) {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function formatTime(min) {
+  const h = Math.floor(min / 60);
+  const m = Math.floor(min) % 60;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+}
+
 // Deterministische random-walk vanaf depot.
 // Elke stop ~300-700m van de vorige, zodat de route eruitziet als een echte rit.
-function generateStops(courierId, depot, totalCount, doneCount) {
+// ETA wordt lineair gespreid over de werkuren van de bezorger.
+function generateStops(courierId, depot, totalCount, doneCount, hoursStr) {
   const seed = parseInt(courierId, 10);
   const stops = [];
   let lat = depot[0];
   let lng = depot[1];
+
+  const [startStr, endStr] = hoursStr.split(" - ");
+  const startMin = parseTime(startStr);
+  const endMin = parseTime(endStr);
+  const stopInterval = totalCount > 0 ? (endMin - startMin) / totalCount : 0;
+
   for (let i = 0; i < totalCount; i++) {
     const angle = ((seed + i * 31) % 360) * (Math.PI / 180);
     const step = 0.003 + ((seed + i * 17) % 5) * 0.001;
     lat += Math.sin(angle) * step;
     lng += Math.cos(angle) * step * 1.5;
-    stops.push({ lat, lng, done: i < doneCount });
+
+    const street = streets[(seed + i * 13) % streets.length];
+    const houseNumber = ((seed + i * 7) % 198) + 1;
+    const eta = formatTime(startMin + i * stopInterval);
+
+    stops.push({
+      lat,
+      lng,
+      done: i < doneCount,
+      orderNumber: `${courierId}-${(i + 1).toString().padStart(3, "0")}`,
+      address: `${street} ${houseNumber}`,
+      eta
+    });
   }
   return stops;
 }
@@ -119,7 +159,7 @@ export const couriers = rawCouriers.map((c) => {
   const depot = cityCoords[c.city] || cityCoords.Houten;
   const total = parseInt(c.progress.split("/")[1], 10) || 0;
   const done = parseInt(c.progress.split("/")[0], 10) || 0;
-  const stops = generateStops(c.id, depot, total, done);
+  const stops = generateStops(c.id, depot, total, done, c.hours);
   const currentLocation = done > 0
     ? [stops[done - 1].lat, stops[done - 1].lng]
     : depot;
