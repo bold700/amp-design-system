@@ -1,7 +1,38 @@
 // Demo-data: 80 AMP-bezorgers met realistische orderaantallen (~40 per persoon).
 // Deterministisch: dezelfde data bij elke reload.
+//
+// Per bezorger:
+//   - depot: lat/lng van de start-stad
+//   - stops: array met alle stops in volgorde, elk met { lat, lng, done }
+//   - currentLocation: huidige positie (laatst gedane stop, of depot bij 0%)
 
-export const couriers = [
+const cityCoords = {
+  Houten:      [52.0314, 5.1681],
+  Utrecht:     [52.0907, 5.1214],
+  Bunnik:      [52.0614, 5.1939],
+  Nieuwegein:  [52.0297, 5.0908],
+  IJsselstein: [52.0214, 5.0444],
+  Onbekend:    [52.0314, 5.1681]
+};
+
+// Deterministische random-walk vanaf depot.
+// Elke stop ~300-700m van de vorige, zodat de route eruitziet als een echte rit.
+function generateStops(courierId, depot, totalCount, doneCount) {
+  const seed = parseInt(courierId, 10);
+  const stops = [];
+  let lat = depot[0];
+  let lng = depot[1];
+  for (let i = 0; i < totalCount; i++) {
+    const angle = ((seed + i * 31) % 360) * (Math.PI / 180);
+    const step = 0.003 + ((seed + i * 17) % 5) * 0.001;
+    lat += Math.sin(angle) * step;
+    lng += Math.cos(angle) * step * 1.5;
+    stops.push({ lat, lng, done: i < doneCount });
+  }
+  return stops;
+}
+
+const rawCouriers = [
   { name: "AMP Hamza K",     id: "1754", city: "Houten",     progress: "23 / 40 Orders", hours: "08:30 - 18:21", status: "59 min te vroeg",          active: false },
   { name: "AMP Huub O",      id: "1249", city: "Onbekend",   progress: "1 / 1 Orders",   hours: "14:00 - 19:19", status: "",                         active: false },
   { name: "AMP Ismail N",    id: "1897", city: "Houten",     progress: "17 / 53 Orders", hours: "08:30 - 17:05", status: "1 uur en 32 min te vroeg", active: false },
@@ -84,26 +115,32 @@ export const couriers = [
   { name: "AMP Thijs V",     id: "1438", city: "Houten",     progress: "26 / 39 Orders", hours: "08:30 - 17:55", status: "",                         active: false }
 ];
 
+// Verrijk elke bezorger met depot + stops + currentLocation
+export const couriers = rawCouriers.map((c) => {
+  const depot = cityCoords[c.city] || cityCoords.Houten;
+  const total = parseInt(c.progress.split("/")[1], 10) || 0;
+  const done = parseInt(c.progress.split("/")[0], 10) || 0;
+  const stops = generateStops(c.id, depot, total, done);
+  const currentLocation = done > 0
+    ? [stops[done - 1].lat, stops[done - 1].lng]
+    : depot;
+  return { ...c, depot, stops, currentLocation };
+});
+
 // Stats afgeleid van de bezorgers-array
 export const courierStats = [
   { label: "Bezorgers", value: String(couriers.length), icon: "mdi-account-group" },
   {
     label: "Stops",
     value: String(
-      couriers.reduce((sum, c) => {
-        const total = parseInt(c.progress.split("/")[1]) || 0;
-        return sum + total;
-      }, 0)
+      couriers.reduce((sum, c) => sum + c.stops.length, 0)
     ),
     icon: "mdi-map-marker-outline"
   },
   {
     label: "Orders",
     value: String(
-      couriers.reduce((sum, c) => {
-        const done = parseInt(c.progress.split("/")[0]) || 0;
-        return sum + done;
-      }, 0)
+      couriers.reduce((sum, c) => sum + c.stops.filter((s) => s.done).length, 0)
     ),
     icon: "mdi-package-variant-closed"
   }
