@@ -320,76 +320,70 @@ async function selectFromMap(courierId) {
             />
           </div>
 
-          <!-- Uitklapbare body: form + lijst -->
-          <v-expand-transition>
+          <!-- Body: form + lijst, alleen zichtbaar als uitgeklapt -->
+          <template v-if="panelExpanded">
+            <!-- Filter form -->
+            <div class="d-flex flex-column ga-3 px-4 pb-4 flex-shrink-0">
+              <v-text-field
+                v-model="searchQuery"
+                density="compact"
+                hide-details
+                placeholder="Search"
+                prepend-inner-icon="mdi-magnify"
+                variant="outlined"
+                clearable
+              />
+              <v-select
+                v-model="sortBy"
+                density="compact"
+                hide-details
+                label="Sorteren op"
+                :items="['Naam', 'Status', 'Plaats']"
+                variant="outlined"
+              />
+              <v-select
+                v-model="depotFilter"
+                density="compact"
+                hide-details
+                label="Depot"
+                :items="depotOptions"
+                variant="outlined"
+              />
+            </div>
+
+            <v-divider />
+
+            <!-- Scrollable courier-lijst -->
             <div
-              v-show="panelExpanded"
-              class="d-flex flex-column"
-              style="min-height: 0; flex: 1 1 auto; overflow: hidden;"
+              class="flex-grow-1 overflow-y-auto px-4 py-3"
+              style="min-height: 0;"
             >
-              <!-- Filter form -->
-              <div class="d-flex flex-column ga-3 px-4 pb-4 flex-shrink-0">
-                <v-text-field
-                  v-model="searchQuery"
-                  density="compact"
-                  hide-details
-                  placeholder="Search"
-                  prepend-inner-icon="mdi-magnify"
-                  variant="outlined"
-                  clearable
-                />
-                <v-select
-                  v-model="sortBy"
-                  density="compact"
-                  hide-details
-                  label="Sorteren op"
-                  :items="['Naam', 'Status', 'Plaats']"
-                  variant="outlined"
-                />
-                <v-select
-                  v-model="depotFilter"
-                  density="compact"
-                  hide-details
-                  label="Depot"
-                  :items="depotOptions"
-                  variant="outlined"
-                />
-              </div>
-
-              <v-divider />
-
-              <!-- Scrollable courier-lijst -->
-              <div
-                class="flex-grow-1 overflow-y-auto px-4 py-3"
-                style="min-height: 0;"
+              <v-list
+                v-model:selected="selectedIds"
+                class="pa-0"
+                bg-color="transparent"
+                nav
               >
-                <v-list
-                  v-model:selected="selectedIds"
-                  class="pa-0"
-                  bg-color="transparent"
-                  nav
-                >
-                  <CourierCard
-                    v-for="courier in filteredCouriers"
-                    :key="courier.id"
-                    :courier="courier"
-                  />
-                </v-list>
+                <CourierCard
+                  v-for="courier in filteredCouriers"
+                  :key="courier.id"
+                  :courier="courier"
+                />
+              </v-list>
 
-                <div
-                  v-if="filteredCouriers.length === 0"
-                  class="text-center py-8 text-body-2 text-medium-emphasis"
-                >
-                  <v-icon
-                    icon="mdi-account-search-outline"
-                    size="32"
-                    class="mb-2 d-block mx-auto"
-                  />
-                  Geen bezorgers gevonden
-                </div>
+              <div
+                v-if="filteredCouriers.length === 0"
+                class="text-center py-8 text-body-2 text-medium-emphasis"
+              >
+                <v-icon
+                  icon="mdi-account-search-outline"
+                  size="32"
+                  class="mb-2 d-block mx-auto"
+                />
+                Geen bezorgers gevonden
               </div>
             </div>
-          </v-expand-transition>
+          </template>
         </v-card>
 
         <!-- Map controls rechts -->
