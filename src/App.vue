@@ -1,64 +1,18 @@
 <script setup>
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
 import { LMap, LTileLayer, LCircleMarker, LPolyline } from "@vue-leaflet/vue-leaflet";
 import "leaflet/dist/leaflet.css";
+import { couriers, courierStats } from "./data/couriers.js";
 
 const activeMode = ref("kaart");
 const mapRef = ref(null);
 
-const courierStats = [
-  { label: "Bezorgers", value: "119", icon: "mdi-account-group" },
-  { label: "Stops", value: "4917", icon: "mdi-map-marker-outline" },
-  { label: "Orders", value: "3395", icon: "mdi-package-variant-closed" }
-];
-
-const couriers = [
-  {
-    name: "AMP Hamza K",
-    id: "1754",
-    city: "Houten",
-    progress: "23 / 40 Orders",
-    hours: "08:30 - 18:21",
-    status: "59 min te vroeg",
-    active: false
-  },
-  {
-    name: "AMP Huub O",
-    id: "1249",
-    city: "Onbekend",
-    progress: "1 / 1 Orders",
-    hours: "14:00 - 19:19",
-    status: "",
-    active: false
-  },
-  {
-    name: "AMP Ismail N",
-    id: "1897",
-    city: "Houten",
-    progress: "17 / 53 Orders",
-    hours: "08:30 - 17:05",
-    status: "1 uur en 32 min te vroeg",
-    active: false
-  },
-  {
-    name: "AMP Mahmut C",
-    id: "1742",
-    city: "Houten",
-    progress: "38 / 38 Orders",
-    hours: "08:30 - 18:03",
-    status: "",
-    active: true
-  },
-  {
-    name: "AMP Mika B",
-    id: "1707",
-    city: "Houten",
-    progress: "25 / 36 Orders",
-    hours: "08:30 - 18:14",
-    status: "26 min te vroeg",
-    active: false
-  }
-];
+async function onMapReady() {
+  await nextTick();
+  const map = mapRef.value?.leafletObject;
+  if (!map) return;
+  map.invalidateSize();
+}
 
 const mapCenter = ref([52.0314, 5.1681]); // Houten, NL
 const mapZoom = ref(11);
@@ -215,37 +169,41 @@ function fitRoute() {
             </template>
           </v-toolbar>
 
-          <div class="flex-grow-1 position-relative">
-            <l-map
-              ref="mapRef"
-              :center="mapCenter"
-              :zoom="mapZoom"
-              :options="{ zoomControl: false, attributionControl: true }"
-              style="height: 100%; width: 100%; z-index: 0;"
-            >
-              <l-tile-layer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              />
+          <div class="flex-grow-1 position-relative" style="min-height: 0;">
+            <div class="position-absolute" style="inset: 0;">
+              <l-map
+                ref="mapRef"
+                :center="mapCenter"
+                :zoom="mapZoom"
+                :use-global-leaflet="false"
+                :options="{ zoomControl: false, attributionControl: true }"
+                style="height: 100%; width: 100%;"
+                @ready="onMapReady"
+              >
+                <l-tile-layer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution="&copy; OpenStreetMap"
+                />
 
-              <l-polyline
-                :lat-lngs="routePath"
-                color="#ff00cc"
-                :weight="5"
-                :opacity="0.9"
-              />
+                <l-polyline
+                  :lat-lngs="routePath"
+                  color="#ff00cc"
+                  :weight="5"
+                  :opacity="0.9"
+                />
 
-              <l-circle-marker
-                v-for="(stop, index) in stops"
-                :key="index"
-                :lat-lng="[stop.lat, stop.lng]"
-                :radius="8"
-                :color="'#ffffff'"
-                :weight="2"
-                :fill-color="stop.color"
-                :fill-opacity="1"
-              />
-            </l-map>
+                <l-circle-marker
+                  v-for="(stop, index) in stops"
+                  :key="index"
+                  :lat-lng="[stop.lat, stop.lng]"
+                  :radius="8"
+                  color="#ffffff"
+                  :weight="2"
+                  :fill-color="stop.color"
+                  :fill-opacity="1"
+                />
+              </l-map>
+            </div>
 
             <div
               class="position-absolute d-flex flex-column ga-2"
