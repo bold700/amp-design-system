@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick } from "vue";
 import { LMap, LTileLayer, LCircleMarker, LPolyline } from "@vue-leaflet/vue-leaflet";
 import "leaflet/dist/leaflet.css";
-import { couriers, depots } from "./data/couriers.js";
+import { couriers, depots, parseDelay } from "./data/couriers.js";
 import CourierCard from "./components/CourierCard.vue";
 import OrderListItem from "./components/OrderListItem.vue";
 
@@ -144,6 +144,55 @@ const selectedProgress = computed(() => {
   const done = selectedCourier.value.stops.filter((s) => s.done).length;
   return total > 0 ? (done / total) * 100 : 0;
 });
+
+// Vertraging-detectie + notificatie-flow
+const delayMinutes = computed(() =>
+  selectedCourier.value ? parseDelay(selectedCourier.value.status) : 0
+);
+const isDelayed = computed(() => delayMinutes.value > 0);
+
+// Huidig adres = laatst bezorgde stop
+const currentAddress = computed(() => {
+  if (!selectedCourier.value) return "";
+  const stops = selectedCourier.value.stops;
+  const lastDoneIdx = stops.findLastIndex((s) => s.done);
+  if (lastDoneIdx < 0) return "Bij depot";
+  return stops[lastDoneIdx].address;
+});
+
+// Bijhouden welke ordernummers al geïnformeerd zijn (per courier reset)
+const notifiedOrders = ref(new Set());
+const notifyChannel = ref("sms");
+const showSnackbar = ref(false);
+const snackbarText = ref("");
+
+const ordersToNotify = computed(() =>
+  pendingStops.value.filter((s) => !notifiedOrders.value.has(s.orderNumber))
+);
+
+watch(selectedCourier, () => {
+  notifiedOrders.value = new Set();
+});
+
+function isNotified(orderNumber) {
+  return notifiedOrders.value.has(orderNumber);
+}
+
+const channelLabels = {
+  email: "Email",
+  sms: "SMS",
+  phone: "Bellen"
+};
+
+function sendNotifications() {
+  const count = ordersToNotify.value.length;
+  if (!count) return;
+  const next = new Set(notifiedOrders.value);
+  ordersToNotify.value.forEach((s) => next.add(s.orderNumber));
+  notifiedOrders.value = next;
+  snackbarText.value = `${count} ${count === 1 ? "klant" : "klanten"} geïnformeerd via ${channelLabels[notifyChannel.value]}`;
+  showSnackbar.value = true;
+}
 
 // Map size invalideren als het panel toggle-t (anders rendert tile-area scheef)
 watch(panelExpanded, async () => {
@@ -363,7 +412,7 @@ async function selectFromMap(courierId) {
                   rounded
                 />
                 <v-chip
-                  v-if="selectedCourier.status"
+                  v-if="selectedCourier.status && !isDelayed"
                   size="small"
                   variant="tonal"
                   color="success"
@@ -372,6 +421,67 @@ async function selectFromMap(courierId) {
                 >
                   {{ selectedCourier.status }}
                 </v-chip>
+              </div>
+
+              <!-- Vertraging-banner + auto-notify card -->
+              <div v-if="isDelayed" class="px-4 pb-4 flex-shrink-0">
+                <v-alert
+                  type="warning"
+                  variant="tonal"
+                  density="compact"
+                  class="mb-3"
+                >
+                  <template #title>
+                    <span class="text-body-2 font-weight-bold">
+                      {{ delayMinutes }} min te laat
+                    </span>
+                  </template>
+                  <div class="text-caption">
+                    Huidige positie: {{ currentAddress }}
+                  </div>
+                </v-alert>
+
+                <v-card variant="outlined" rounded="lg">
+                  <v-card-text class="pa-3">
+                    <div class="text-body-2 font-weight-medium mb-1">
+                      Klanten informeren
+                    </div>
+                    <div class="text-caption text-medium-emphasis mb-3">
+                      {{ ordersToNotify.length }} {{ ordersToNotify.length === 1 ? "openstaande klant" : "openstaande klanten" }}
+                      krijgen een nieuwe ETA
+                    </div>
+
+                    <v-btn-toggle
+                      v-model="notifyChannel"
+                      mandatory
+                      density="compact"
+                      variant="outlined"
+                      color="primary"
+                      class="mb-3 d-flex"
+                    >
+                      <v-btn value="email" size="small" prepend-icon="mdi-email-outline" class="flex-grow-1">
+                        Email
+                      </v-btn>
+                      <v-btn value="sms" size="small" prepend-icon="mdi-message-text-outline" class="flex-grow-1">
+                        SMS
+                      </v-btn>
+                      <v-btn value="phone" size="small" prepend-icon="mdi-phone-outline" class="flex-grow-1">
+                        Bellen
+                      </v-btn>
+                    </v-btn-toggle>
+
+                    <v-btn
+                      color="warning"
+                      variant="elevated"
+                      block
+                      :disabled="ordersToNotify.length === 0"
+                      prepend-icon="mdi-send"
+                      @click="sendNotifications"
+                    >
+                      Verstuur {{ ordersToNotify.length }} notificaties
+                    </v-btn>
+                  </v-card-text>
+                </v-card>
               </div>
 
               <v-divider />
@@ -390,6 +500,8 @@ async function selectFromMap(courierId) {
                     :key="stop.orderNumber"
                     :stop="stop"
                     :index="doneStops.length + i + 1"
+                    :delay-minutes="delayMinutes"
+                    :notified="isNotified(stop.orderNumber)"
                   />
 
                   <v-list-subheader v-if="doneStops.length > 0">
@@ -537,5 +649,17 @@ async function selectFromMap(courierId) {
         </v-card>
       </div>
     </v-main>
+
+    <v-snackbar
+      v-model="showSnackbar"
+      :timeout="3500"
+      color="success"
+      location="bottom"
+    >
+      <div class="d-flex align-center ga-2">
+        <v-icon icon="mdi-check-circle" />
+        {{ snackbarText }}
+      </div>
+    </v-snackbar>
   </v-app>
 </template>

@@ -35,6 +35,26 @@ function formatTime(min) {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
+// Parseer vertraging-string als "1 uur 32 min te laat" -> 92 minuten.
+// Returned 0 als status "te vroeg" of leeg is.
+export function parseDelay(status) {
+  if (!status) return 0;
+  const lower = status.toLowerCase();
+  if (!lower.includes("te laat")) return 0;
+  let total = 0;
+  const hourMatch = lower.match(/(\d+)\s*uur/);
+  const minMatch = lower.match(/(\d+)\s*min/);
+  if (hourMatch) total += parseInt(hourMatch[1], 10) * 60;
+  if (minMatch) total += parseInt(minMatch[1], 10);
+  return total;
+}
+
+// Hertel een ETA-string als "09:15" met X extra minuten.
+export function shiftEta(eta, deltaMin) {
+  if (!deltaMin) return eta;
+  return formatTime(parseTime(eta) + deltaMin);
+}
+
 // Deterministische random-walk vanaf depot.
 // Elke stop ~300-700m van de vorige, zodat de route eruitziet als een echte rit.
 // ETA wordt lineair gespreid over de werkuren van de bezorger.
