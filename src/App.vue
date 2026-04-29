@@ -8,7 +8,7 @@ import CourierCard from "./components/CourierCard.vue";
 const mapRef = ref(null);
 
 // Panel zichtbaarheid (toggle via collapse-knop)
-const panelVisible = ref(true);
+const panelExpanded = ref(true);
 
 // Filter / sort state
 const searchQuery = ref("");
@@ -113,7 +113,7 @@ async function onMapReady() {
 }
 
 // Linker padding houdt panel-ruimte vrij. Als panel verborgen is: gewoon 60px.
-const leftPadding = computed(() => (panelVisible.value ? 420 : 60));
+const leftPadding = computed(() => (panelExpanded.value ? 420 : 60));
 
 watch(selectedCourier, async (courier) => {
   await nextTick();
@@ -133,7 +133,7 @@ watch(selectedCourier, async (courier) => {
 });
 
 // Map size invalideren als het panel toggle-t (anders rendert tile-area scheef)
-watch(panelVisible, async () => {
+watch(panelExpanded, async () => {
   await nextTick();
   setTimeout(() => mapRef.value?.leafletObject?.invalidateSize(), 250);
 });
@@ -285,28 +285,19 @@ async function selectFromMap(courierId) {
           </l-map>
         </div>
 
-        <!-- Open-knop wanneer panel verborgen is -->
-        <v-slide-x-transition>
-          <v-btn
-            v-if="!panelVisible"
-            class="position-absolute"
-            style="top: 16px; left: 16px; z-index: 500;"
-            icon="mdi-menu"
-            color="surface"
-            :elevation="3"
-            @click="panelVisible = true"
-          />
-        </v-slide-x-transition>
-
-        <!-- Floating panel links -->
-        <v-slide-x-transition>
-          <v-card
-            v-if="panelVisible"
-            class="position-absolute d-flex flex-column"
-            style="top: 16px; left: 16px; bottom: 16px; width: 390px; z-index: 500;"
-            rounded="lg"
-            :elevation="3"
-          >
+        <!-- Floating panel links: header altijd zichtbaar, body uitklapbaar -->
+        <v-card
+          class="position-absolute d-flex flex-column"
+          :style="{
+            top: '16px',
+            left: '16px',
+            bottom: panelExpanded ? '16px' : 'auto',
+            width: '390px',
+            zIndex: 500
+          }"
+          rounded="lg"
+          :elevation="3"
+        >
           <!-- Panel header -->
           <div class="d-flex align-center px-4 py-3 flex-shrink-0">
             <span class="text-h6 font-weight-medium">
@@ -322,76 +313,84 @@ async function selectFromMap(courierId) {
             />
             <v-btn
               v-else
-              icon="mdi-unfold-less-vertical"
+              :icon="panelExpanded ? 'mdi-unfold-less-vertical' : 'mdi-unfold-more-vertical'"
               size="small"
               variant="tonal"
-              @click="panelVisible = false"
+              @click="panelExpanded = !panelExpanded"
             />
           </div>
 
-          <!-- Filter form -->
-          <div class="d-flex flex-column ga-3 px-4 pb-4 flex-shrink-0">
-            <v-text-field
-              v-model="searchQuery"
-              density="compact"
-              hide-details
-              placeholder="Search"
-              prepend-inner-icon="mdi-magnify"
-              variant="outlined"
-              clearable
-            />
-            <v-select
-              v-model="sortBy"
-              density="compact"
-              hide-details
-              label="Sorteren op"
-              :items="['Naam', 'Status', 'Plaats']"
-              variant="outlined"
-            />
-            <v-select
-              v-model="depotFilter"
-              density="compact"
-              hide-details
-              label="Depot"
-              :items="depotOptions"
-              variant="outlined"
-            />
-          </div>
-
-          <v-divider />
-
-          <!-- Scrollable courier-lijst -->
-          <div
-            class="flex-grow-1 overflow-y-auto px-4 py-3"
-            style="min-height: 0;"
-          >
-            <v-list
-              v-model:selected="selectedIds"
-              class="pa-0"
-              bg-color="transparent"
-              nav
-            >
-              <CourierCard
-                v-for="courier in filteredCouriers"
-                :key="courier.id"
-                :courier="courier"
-              />
-            </v-list>
-
+          <!-- Uitklapbare body: form + lijst -->
+          <v-expand-transition>
             <div
-              v-if="filteredCouriers.length === 0"
-              class="text-center py-8 text-body-2 text-medium-emphasis"
+              v-show="panelExpanded"
+              class="d-flex flex-column"
+              style="min-height: 0; flex: 1 1 auto; overflow: hidden;"
             >
-              <v-icon
-                icon="mdi-account-search-outline"
-                size="32"
-                class="mb-2 d-block mx-auto"
-              />
-              Geen bezorgers gevonden
+              <!-- Filter form -->
+              <div class="d-flex flex-column ga-3 px-4 pb-4 flex-shrink-0">
+                <v-text-field
+                  v-model="searchQuery"
+                  density="compact"
+                  hide-details
+                  placeholder="Search"
+                  prepend-inner-icon="mdi-magnify"
+                  variant="outlined"
+                  clearable
+                />
+                <v-select
+                  v-model="sortBy"
+                  density="compact"
+                  hide-details
+                  label="Sorteren op"
+                  :items="['Naam', 'Status', 'Plaats']"
+                  variant="outlined"
+                />
+                <v-select
+                  v-model="depotFilter"
+                  density="compact"
+                  hide-details
+                  label="Depot"
+                  :items="depotOptions"
+                  variant="outlined"
+                />
+              </div>
+
+              <v-divider />
+
+              <!-- Scrollable courier-lijst -->
+              <div
+                class="flex-grow-1 overflow-y-auto px-4 py-3"
+                style="min-height: 0;"
+              >
+                <v-list
+                  v-model:selected="selectedIds"
+                  class="pa-0"
+                  bg-color="transparent"
+                  nav
+                >
+                  <CourierCard
+                    v-for="courier in filteredCouriers"
+                    :key="courier.id"
+                    :courier="courier"
+                  />
+                </v-list>
+
+                <div
+                  v-if="filteredCouriers.length === 0"
+                  class="text-center py-8 text-body-2 text-medium-emphasis"
+                >
+                  <v-icon
+                    icon="mdi-account-search-outline"
+                    size="32"
+                    class="mb-2 d-block mx-auto"
+                  />
+                  Geen bezorgers gevonden
+                </div>
+              </div>
             </div>
-          </div>
-          </v-card>
-        </v-slide-x-transition>
+          </v-expand-transition>
+        </v-card>
 
         <!-- Map controls rechts -->
         <div
