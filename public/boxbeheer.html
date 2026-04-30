@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Boxbeheer — Resource Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+            colors: {
+              border: '#e4e4e7',
+              ring: '#18181b'
+            }
+          }
+        }
+      };
+    </script>
+    <link rel="preconnect" href="https://rsms.me/" />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <style>
+      html { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+      body { background: #fafafa; color: #09090b; }
+      [data-screen-enter] { animation: fade .18s ease both; }
+      @keyframes fade { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: none } }
+      .scan-frame::before, .scan-frame::after,
+      .scan-frame > span::before, .scan-frame > span::after {
+        content:''; position:absolute; width:28px; height:28px; border-color:#fff; border-style:solid; border-width:0;
+      }
+      .scan-frame::before { top:12px; left:12px; border-top-width:3px; border-left-width:3px; border-top-left-radius:6px; }
+      .scan-frame::after { top:12px; right:12px; border-top-width:3px; border-right-width:3px; border-top-right-radius:6px; }
+      .scan-frame > span::before { bottom:12px; left:12px; border-bottom-width:3px; border-left-width:3px; border-bottom-left-radius:6px; }
+      .scan-frame > span::after { bottom:12px; right:12px; border-bottom-width:3px; border-right-width:3px; border-bottom-right-radius:6px; }
+      @keyframes scanline { 0% { top:14%; opacity:.0 } 10% { opacity:.9 } 90% { opacity:.9 } 100% { top:86%; opacity:0 } }
+      .scan-line { animation: scanline 2.4s ease-in-out infinite; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.3.1",
+          "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+          "lucide-react": "https://esm.sh/lucide-react@0.460.0?deps=react@18.3.1"
+        }
+      }
+    </script>
+
+    <script type="module">
+      import React, { useState, useMemo } from "react";
+      import { createRoot } from "react-dom/client";
+      import {
+        QrCode, ArrowLeft, ScanLine, ChevronRight, Search, Filter,
+        Package, Wrench, AlertTriangle, Boxes, Camera, Plus, Trash2,
+        CheckCircle2, History, MapPin, Calendar, User, ClipboardCheck,
+        ShieldAlert, RotateCcw, X
+      } from "lucide-react";
+
+      const e = React.createElement;
+
+      // -----------------------------
+      // Mock data
+      // -----------------------------
+      const STATUS = {
+        omloop:    { key: "omloop",    label: "In omloop",    dot: "bg-emerald-500", chip: "bg-emerald-50 text-emerald-700 ring-emerald-600/20", solid: "bg-emerald-600" },
+        onderhoud: { key: "onderhoud", label: "In onderhoud", dot: "bg-amber-500",   chip: "bg-amber-50 text-amber-800 ring-amber-600/20",      solid: "bg-amber-600" },
+        kapot:     { key: "kapot",     label: "Kapot",        dot: "bg-red-500",     chip: "bg-red-50 text-red-700 ring-red-600/20",            solid: "bg-red-600" }
+      };
+
+      const PART_STATUS = {
+        ok:       { label: "OK",       chip: "bg-emerald-50 text-emerald-700 ring-emerald-600/20" },
+        versleten:{ label: "Versleten",chip: "bg-amber-50 text-amber-800 ring-amber-600/20" },
+        defect:   { label: "Defect",   chip: "bg-red-50 text-red-700 ring-red-600/20" }
+      };
+
+      const INITIAL_BOXES = [
+        { id: "BX-1042", type: "Standaardbox 60L", status: "omloop",    location: "Ahold DC Zaandam",       sinds: "2024-08-15", last: { action: "Uitgegeven aan klant",    date: "2026-04-22" },
+          parts: [ { id: "PT-2201", type: "RFID-tag",  status: "ok" }, { id: "PT-2202", type: "Sluiting", status: "ok" } ],
+          history: [
+            { date: "2026-04-22", action: "Uit onderhoud gehaald", by: "M. Janssen",  reason: "Reparatie afgerond",  parts: ["Sluiting"] },
+            { date: "2026-04-15", action: "In onderhoud genomen",  by: "S. de Vries", reason: "Defect onderdeel",    parts: [] },
+            { date: "2024-08-15", action: "Eerste uitgifte",        by: "Systeem",     reason: "—",                    parts: [] }
+          ] },
+        { id: "BX-1078", type: "Compactbox 30L",   status: "onderhoud", location: "Werkplaats Houten",       sinds: "2023-11-02", last: { action: "In onderhoud genomen",   date: "2026-04-28" },
+          parts: [ { id: "PT-2210", type: "RFID-tag", status: "ok" }, { id: "PT-2211", type: "Wieltje",  status: "defect" } ],
+          history: [
+            { date: "2026-04-28", action: "In onderhoud genomen", by: "K. Bakker",  reason: "Defect onderdeel", parts: [] },
+            { date: "2026-03-10", action: "Uitgegeven aan klant",  by: "Systeem",    reason: "—",                parts: [] }
+          ] },
+        { id: "BX-1109", type: "Standaardbox 60L", status: "kapot",     location: "Werkplaats Houten",       sinds: "2022-06-21", last: { action: "Afgekeurd",              date: "2026-04-29" },
+          parts: [ { id: "PT-2240", type: "Frame",   status: "defect" }, { id: "PT-2241", type: "Sluiting", status: "versleten" } ],
+          history: [
+            { date: "2026-04-29", action: "Afgekeurd",              by: "M. Janssen", reason: "Schade", parts: [] },
+            { date: "2026-04-25", action: "In onderhoud genomen",  by: "M. Janssen", reason: "Schade", parts: [] }
+          ] },
+        { id: "BX-1156", type: "XL-box 120L",      status: "omloop",    location: "Jumbo DC Veghel",         sinds: "2025-01-09", last: { action: "Uitgegeven aan klant",   date: "2026-04-19" },
+          parts: [ { id: "PT-2305", type: "RFID-tag", status: "ok" } ],
+          history: [ { date: "2026-04-19", action: "Uitgegeven aan klant", by: "Systeem", reason: "—", parts: [] } ] },
+        { id: "BX-1188", type: "Compactbox 30L",   status: "omloop",    location: "Lidl DC Heerenveen",      sinds: "2024-04-30", last: { action: "Uitgegeven aan klant",   date: "2026-04-12" },
+          parts: [ { id: "PT-2330", type: "RFID-tag", status: "ok" }, { id: "PT-2331", type: "Sluiting", status: "ok" } ],
+          history: [ { date: "2026-04-12", action: "Uitgegeven aan klant", by: "Systeem", reason: "—", parts: [] } ] },
+        { id: "BX-1201", type: "Standaardbox 60L", status: "onderhoud", location: "Werkplaats Houten",       sinds: "2023-09-14", last: { action: "In onderhoud genomen",   date: "2026-04-27" },
+          parts: [ { id: "PT-2401", type: "RFID-tag", status: "versleten" } ],
+          history: [
+            { date: "2026-04-27", action: "In onderhoud genomen", by: "S. de Vries", reason: "Slijtage", parts: [] },
+            { date: "2026-02-04", action: "Uitgegeven aan klant",  by: "Systeem",     reason: "—",        parts: [] }
+          ] },
+        { id: "BX-1243", type: "XL-box 120L",      status: "omloop",    location: "PLUS DC Oss",             sinds: "2025-02-11", last: { action: "Uitgegeven aan klant",   date: "2026-04-08" },
+          parts: [ { id: "PT-2440", type: "RFID-tag", status: "ok" } ],
+          history: [ { date: "2026-04-08", action: "Uitgegeven aan klant", by: "Systeem", reason: "—", parts: [] } ] },
+        { id: "BX-1267", type: "Standaardbox 60L", status: "kapot",     location: "Werkplaats Houten",       sinds: "2021-12-03", last: { action: "Afgekeurd",              date: "2026-04-21" },
+          parts: [ { id: "PT-2475", type: "Frame", status: "defect" } ],
+          history: [
+            { date: "2026-04-21", action: "Afgekeurd",              by: "K. Bakker", reason: "Schade", parts: [] },
+            { date: "2026-04-18", action: "In onderhoud genomen",  by: "K. Bakker", reason: "Schade", parts: [] }
+          ] },
+        { id: "BX-1284", type: "Compactbox 30L",   status: "omloop",    location: "Albert Heijn Filiaal 0123", sinds: "2024-10-17", last: { action: "Uitgegeven aan klant", date: "2026-04-25" },
+          parts: [ { id: "PT-2502", type: "RFID-tag", status: "ok" } ],
+          history: [ { date: "2026-04-25", action: "Uitgegeven aan klant", by: "Systeem", reason: "—", parts: [] } ] },
+        { id: "BX-1305", type: "Standaardbox 60L", status: "onderhoud", location: "Werkplaats Utrecht",      sinds: "2023-05-20", last: { action: "In onderhoud genomen",   date: "2026-04-26" },
+          parts: [ { id: "PT-2540", type: "Sluiting", status: "defect" } ],
+          history: [
+            { date: "2026-04-26", action: "In onderhoud genomen", by: "M. Janssen", reason: "Defect onderdeel", parts: [] }
+          ] },
+        { id: "BX-1342", type: "XL-box 120L",      status: "omloop",    location: "Coop DC Gieten",          sinds: "2024-12-01", last: { action: "Uitgegeven aan klant",   date: "2026-04-17" },
+          parts: [ { id: "PT-2588", type: "RFID-tag", status: "ok" }, { id: "PT-2589", type: "Wieltje", status: "ok" } ],
+          history: [ { date: "2026-04-17", action: "Uitgegeven aan klant", by: "Systeem", reason: "—", parts: [] } ] },
+        { id: "BX-1399", type: "Standaardbox 60L", status: "omloop",    location: "Spar Filiaal 0451",       sinds: "2025-03-22", last: { action: "Uitgegeven aan klant",   date: "2026-04-23" },
+          parts: [ { id: "PT-2620", type: "RFID-tag", status: "ok" } ],
+          history: [ { date: "2026-04-23", action: "Uitgegeven aan klant", by: "Systeem", reason: "—", parts: [] } ] }
+      ];
+
+      const REDEN_OPTIES = ["Schade", "Defect onderdeel", "Slijtage", "Anders"];
+
+      // -----------------------------
+      // Helpers + UI primitives
+      // -----------------------------
+      const today = "2026-04-30";
+
+      function formatDate(iso) {
+        try {
+          const d = new Date(iso);
+          return d.toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" });
+        } catch { return iso; }
+      }
+
+      function StatusBadge({ status, size = "sm" }) {
+        const s = STATUS[status];
+        if (!s) return null;
+        const sz = size === "lg" ? "text-sm px-2.5 py-1" : "text-xs px-2 py-0.5";
+        return e(
+          "span",
+          { className: `inline-flex items-center gap-1.5 rounded-full ring-1 ring-inset font-medium ${s.chip} ${sz}` },
+          e("span", { className: `h-1.5 w-1.5 rounded-full ${s.dot}` }),
+          s.label
+        );
+      }
+
+      function PartStatusBadge({ status }) {
+        const s = PART_STATUS[status];
+        if (!s) return null;
+        return e(
+          "span",
+          { className: `inline-flex rounded-full ring-1 ring-inset font-medium text-xs px-2 py-0.5 ${s.chip}` },
+          s.label
+        );
+      }
+
+      function Avatar({ name = "Resource Planner" }) {
+        const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+        return e(
+          "div",
+          { className: "h-9 w-9 rounded-full bg-zinc-900 text-white grid place-items-center text-sm font-medium ring-2 ring-white shadow-sm" },
+          initials
+        );
+      }
+
+      function Button({ variant = "default", size = "md", children, className = "", ...props }) {
+        const base = "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
+        const sizes = {
+          sm: "h-9 px-3 text-sm",
+          md: "h-10 px-4 text-sm",
+          lg: "h-12 px-5 text-base",
+          icon: "h-9 w-9"
+        };
+        const variants = {
+          default: "bg-zinc-900 text-white hover:bg-zinc-800",
+          outline: "border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-900",
+          ghost: "hover:bg-zinc-100 text-zinc-900",
+          warning: "bg-amber-600 text-white hover:bg-amber-700",
+          success: "bg-emerald-600 text-white hover:bg-emerald-700",
+          danger: "bg-red-600 text-white hover:bg-red-700"
+        };
+        return e("button", { ...props, className: `${base} ${sizes[size]} ${variants[variant]} ${className}` }, children);
+      }
+
+      function Card({ children, className = "" }) {
+        return e("div", { className: `rounded-xl border border-zinc-200 bg-white ${className}` }, children);
+      }
+
+      // -----------------------------
+      // Screen 1 — Dashboard
+      // -----------------------------
+      function Dashboard({ boxes, onScan, onOpenBox }) {
+        const [filter, setFilter] = useState("alle");
+        const [search, setSearch] = useState("");
+
+        const counts = useMemo(() => {
+          const c = { alle: boxes.length, omloop: 0, onderhoud: 0, kapot: 0 };
+          for (const b of boxes) c[b.status]++;
+          return c;
+        }, [boxes]);
+
+        const filtered = useMemo(() => {
+          let list = filter === "alle" ? boxes : boxes.filter(b => b.status === filter);
+          const q = search.trim().toLowerCase();
+          if (q) list = list.filter(b => b.id.toLowerCase().includes(q) || b.location.toLowerCase().includes(q) || b.type.toLowerCase().includes(q));
+          return list;
+        }, [boxes, filter, search]);
+
+        const FILTERS = [
+          { id: "alle",      label: "Alle"          },
+          { id: "omloop",    label: "In omloop"     },
+          { id: "onderhoud", label: "In onderhoud"  },
+          { id: "kapot",     label: "Kapot"         }
+        ];
+
+        const KPIS = [
+          { key: "omloop",    label: "In omloop",    icon: Package,        accent: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500",  value: counts.omloop },
+          { key: "onderhoud", label: "In onderhoud", icon: Wrench,         accent: "bg-amber-50 text-amber-800",     dot: "bg-amber-500",    value: counts.onderhoud },
+          { key: "kapot",     label: "Kapot",        icon: AlertTriangle,  accent: "bg-red-50 text-red-700",         dot: "bg-red-500",      value: counts.kapot },
+          { key: "totaal",    label: "Totaal",       icon: Boxes,          accent: "bg-zinc-100 text-zinc-700",       dot: "bg-zinc-400",     value: counts.alle }
+        ];
+
+        return e(
+          "div",
+          { "data-screen-enter": true, className: "min-h-dvh" },
+          // Header
+          e("header", { className: "sticky top-0 z-10 border-b border-zinc-200 bg-white/80 backdrop-blur" },
+            e("div", { className: "mx-auto max-w-6xl px-4 sm:px-6 h-14 flex items-center justify-between" },
+              e("div", { className: "flex items-center gap-2" },
+                e("div", { className: "h-7 w-7 rounded-md bg-zinc-900 text-white grid place-items-center" }, e(Boxes, { size: 16 })),
+                e("h1", { className: "text-base font-semibold tracking-tight" }, "Boxbeheer")
+              ),
+              e(Avatar, { name: "Resource Planner" })
+            )
+          ),
+          e("main", { className: "mx-auto max-w-6xl px-4 sm:px-6 py-6 space-y-6" },
+            // Top row: title + CTA
+            e("div", { className: "flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3" },
+              e("div", null,
+                e("h2", { className: "text-xl sm:text-2xl font-semibold tracking-tight" }, "Vlootoverzicht"),
+                e("p", { className: "text-sm text-zinc-500 mt-0.5" }, "Bewaak status en onderhoud van alle passieve boxen.")
+              ),
+              e(Button, { size: "lg", onClick: onScan, className: "w-full sm:w-auto shadow-sm" },
+                e(QrCode, { size: 18 }), "Box scannen"
+              )
+            ),
+            // KPI grid
+            e("div", { className: "grid grid-cols-2 lg:grid-cols-4 gap-3" },
+              ...KPIS.map(k => e(Card, { key: k.key, className: "p-4" },
+                e("div", { className: "flex items-start justify-between" },
+                  e("div", null,
+                    e("div", { className: "flex items-center gap-2" },
+                      e("span", { className: `h-2 w-2 rounded-full ${k.dot}` }),
+                      e("span", { className: "text-xs font-medium text-zinc-500 uppercase tracking-wide" }, k.label)
+                    ),
+                    e("div", { className: "mt-2 text-3xl font-semibold tracking-tight tabular-nums" }, k.value)
+                  ),
+                  e("div", { className: `h-9 w-9 rounded-lg grid place-items-center ${k.accent}` }, e(k.icon, { size: 18 }))
+                )
+              ))
+            ),
+            // Filter + search
+            e("div", { className: "flex flex-col sm:flex-row sm:items-center gap-3" },
+              e("div", { className: "flex items-center gap-1.5 overflow-x-auto -mx-1 px-1 pb-1" },
+                ...FILTERS.map(f => e("button", {
+                  key: f.id,
+                  onClick: () => setFilter(f.id),
+                  className: `shrink-0 inline-flex items-center gap-2 h-9 px-3 rounded-full text-sm font-medium ring-1 ring-inset transition ${
+                    filter === f.id
+                      ? "bg-zinc-900 text-white ring-zinc-900"
+                      : "bg-white text-zinc-700 ring-zinc-200 hover:bg-zinc-50"
+                  }`
+                },
+                  f.id !== "alle" && e("span", { className: `h-1.5 w-1.5 rounded-full ${STATUS[f.id]?.dot || ""}` }),
+                  f.label,
+                  e("span", {
+                    className: `text-xs tabular-nums ${
+                      filter === f.id ? "text-zinc-300" : "text-zinc-400"
+                    }`
+                  }, counts[f.id])
+                ))
+              ),
+              e("div", { className: "relative sm:ml-auto sm:max-w-xs sm:w-72" },
+                e(Search, { size: 16, className: "absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" }),
+                e("input", {
+                  value: search,
+                  onChange: ev => setSearch(ev.target.value),
+                  placeholder: "Zoek box, locatie, type",
+                  className: "w-full h-9 pl-9 pr-3 rounded-lg border border-zinc-200 bg-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                })
+              )
+            ),
+            // Table / list
+            e(Card, { className: "overflow-hidden" },
+              // Desktop table
+              e("table", { className: "hidden md:table w-full text-sm" },
+                e("thead", { className: "bg-zinc-50 text-zinc-500" },
+                  e("tr", null,
+                    e("th", { className: "text-left font-medium px-4 py-2.5" }, "Box-ID"),
+                    e("th", { className: "text-left font-medium px-4 py-2.5" }, "Status"),
+                    e("th", { className: "text-left font-medium px-4 py-2.5" }, "Locatie"),
+                    e("th", { className: "text-left font-medium px-4 py-2.5" }, "Laatste actie"),
+                    e("th", { className: "text-left font-medium px-4 py-2.5" }, "Datum"),
+                    e("th", { className: "px-4 py-2.5", "aria-label": "Open" })
+                  )
+                ),
+                e("tbody", null,
+                  ...filtered.map(b => e("tr", {
+                    key: b.id,
+                    onClick: () => onOpenBox(b.id),
+                    className: "border-t border-zinc-100 hover:bg-zinc-50 cursor-pointer"
+                  },
+                    e("td", { className: "px-4 py-3 font-medium tabular-nums" }, b.id),
+                    e("td", { className: "px-4 py-3" }, e(StatusBadge, { status: b.status })),
+                    e("td", { className: "px-4 py-3 text-zinc-700" }, b.location),
+                    e("td", { className: "px-4 py-3 text-zinc-700" }, b.last.action),
+                    e("td", { className: "px-4 py-3 text-zinc-500 tabular-nums" }, formatDate(b.last.date)),
+                    e("td", { className: "px-4 py-3 text-right text-zinc-400" }, e(ChevronRight, { size: 16 }))
+                  ))
+                )
+              ),
+              // Mobile list
+              e("ul", { className: "md:hidden divide-y divide-zinc-100" },
+                ...filtered.map(b => e("li", { key: b.id },
+                  e("button", {
+                    onClick: () => onOpenBox(b.id),
+                    className: "w-full text-left px-4 py-3 hover:bg-zinc-50 flex items-center gap-3"
+                  },
+                    e("div", { className: "flex-1 min-w-0" },
+                      e("div", { className: "flex items-center justify-between gap-2" },
+                        e("span", { className: "font-medium tabular-nums" }, b.id),
+                        e(StatusBadge, { status: b.status })
+                      ),
+                      e("div", { className: "mt-1 text-sm text-zinc-600 truncate" }, b.location),
+                      e("div", { className: "mt-1 text-xs text-zinc-500 flex items-center gap-2" },
+                        e("span", null, b.last.action),
+                        e("span", { className: "text-zinc-300" }, "·"),
+                        e("span", { className: "tabular-nums" }, formatDate(b.last.date))
+                      )
+                    ),
+                    e(ChevronRight, { size: 16, className: "text-zinc-400 shrink-0" })
+                  )
+                ))
+              ),
+              filtered.length === 0 && e("div", { className: "p-10 text-center" },
+                e("div", { className: "mx-auto h-10 w-10 rounded-full bg-zinc-100 grid place-items-center text-zinc-400" }, e(Filter, { size: 18 })),
+                e("p", { className: "mt-3 text-sm font-medium" }, "Geen boxen gevonden"),
+                e("p", { className: "mt-1 text-sm text-zinc-500" }, "Pas je filter of zoekterm aan.")
+              )
+            )
+          )
+        );
+      }
+
+      // -----------------------------
+      // Screen 2 — Scan
+      // -----------------------------
+      function ScanScreen({ boxes, onBack, onConfirm }) {
+        const [scanned, setScanned] = useState(null);     // box object
+        const [stage, setStage] = useState("scan");         // scan | choose | form | success
+        const [reden, setReden] = useState("");
+        const [toelichting, setToelichting] = useState("");
+        const [parts, setParts] = useState([]);             // [{id, type}]
+        const [partInput, setPartInput] = useState("");
+
+        function simulateScan() {
+          const random = boxes[Math.floor(Math.random() * boxes.length)];
+          setScanned(random);
+          setStage("choose");
+        }
+
+        function reset() {
+          setScanned(null); setStage("scan"); setReden(""); setToelichting(""); setParts([]); setPartInput("");
+        }
+
+        function takeIntoMaintenance() {
+          setStage("form");
+        }
+        function takeOutOfMaintenance() {
+          // Direct bevestigen
+          onConfirm({ boxId: scanned.id, action: "uit-onderhoud" });
+          setStage("success");
+        }
+        function submitForm(ev) {
+          ev.preventDefault();
+          if (!reden) return;
+          onConfirm({
+            boxId: scanned.id,
+            action: "in-onderhoud",
+            reden,
+            toelichting,
+            parts
+          });
+          setStage("success");
+        }
+
+        function addPart() {
+          const id = partInput.trim();
+          if (!id) return;
+          if (parts.find(p => p.id === id)) { setPartInput(""); return; }
+          // Mock: leid type af uit prefix
+          const type = id.toLowerCase().includes("rfid") ? "RFID-tag" :
+                       id.toLowerCase().includes("slu")  ? "Sluiting" :
+                       id.toLowerCase().includes("wiel") ? "Wieltje"  : "Onderdeel";
+          setParts([...parts, { id, type }]);
+          setPartInput("");
+        }
+        function removePart(id) {
+          setParts(parts.filter(p => p.id !== id));
+        }
+        function simulatePartScan() {
+          const candidates = ["PT-9001-RFID", "PT-9002-SLU", "PT-9003-WIEL", "PT-9004"];
+          const next = candidates[parts.length % candidates.length];
+          if (!parts.find(p => p.id === next)) {
+            const type = next.includes("RFID") ? "RFID-tag" : next.includes("SLU") ? "Sluiting" : next.includes("WIEL") ? "Wieltje" : "Onderdeel";
+            setParts([...parts, { id: next, type }]);
+          }
+        }
+
+        return e("div", { "data-screen-enter": true, className: "min-h-dvh bg-zinc-950 text-white flex flex-col" },
+          // Top bar
+          e("header", { className: "h-14 px-3 flex items-center justify-between" },
+            e(Button, { variant: "ghost", size: "icon", onClick: onBack, className: "text-white hover:bg-white/10" }, e(ArrowLeft, { size: 18 })),
+            e("div", { className: "text-sm font-medium" }, stage === "scan" ? "Box scannen" : stage === "choose" ? "Box gevonden" : stage === "form" ? "In onderhoud nemen" : "Bevestigd"),
+            e("div", { className: "w-9" })
+          ),
+
+          // Body
+          stage === "scan" && e(React.Fragment, null,
+            e("div", { className: "flex-1 px-4 pb-4 flex flex-col items-center justify-center gap-6" },
+              e("div", { className: "scan-frame relative w-full max-w-sm aspect-square rounded-2xl bg-zinc-900 ring-1 ring-white/10 overflow-hidden" },
+                e("span"),
+                e("div", { className: "absolute inset-0 grid place-items-center text-zinc-500" },
+                  e("div", { className: "flex flex-col items-center gap-3" },
+                    e(Camera, { size: 36 }),
+                    e("p", { className: "text-xs uppercase tracking-widest" }, "Cameraweergave"),
+                    e("p", { className: "text-sm text-zinc-400" }, "Richt op de QR-code op de box")
+                  )
+                ),
+                e("div", { className: "scan-line absolute left-6 right-6 h-0.5 bg-emerald-400/80 shadow-[0_0_18px_2px_rgba(16,185,129,.65)]" })
+              ),
+              e("p", { className: "text-sm text-zinc-400 text-center max-w-sm" }, "Houd de box stil zodat de scanner de QR-code kan lezen.")
+            ),
+            e("div", { className: "px-4 pb-[max(env(safe-area-inset-bottom),16px)] pt-2 border-t border-white/5 bg-zinc-950" },
+              e(Button, { size: "lg", onClick: simulateScan, className: "w-full bg-white text-zinc-900 hover:bg-zinc-100" },
+                e(ScanLine, { size: 18 }), "Simuleer scan"
+              )
+            )
+          ),
+
+          stage === "choose" && scanned && e("div", { className: "flex-1 px-4 pb-6 flex flex-col" },
+            e("div", { className: "rounded-2xl bg-zinc-900 ring-1 ring-white/10 p-5" },
+              e("div", { className: "flex items-center justify-between" },
+                e("div", null,
+                  e("div", { className: "text-xs text-zinc-400" }, "Box-ID"),
+                  e("div", { className: "text-2xl font-semibold tabular-nums mt-0.5" }, scanned.id)
+                ),
+                e(StatusBadge, { status: scanned.status, size: "lg" })
+              ),
+              e("dl", { className: "grid grid-cols-2 gap-3 mt-5 text-sm" },
+                e("div", null, e("dt", { className: "text-zinc-400 text-xs" }, "Type"), e("dd", { className: "mt-0.5" }, scanned.type)),
+                e("div", null, e("dt", { className: "text-zinc-400 text-xs" }, "Locatie"), e("dd", { className: "mt-0.5" }, scanned.location)),
+                e("div", null, e("dt", { className: "text-zinc-400 text-xs" }, "Laatste actie"), e("dd", { className: "mt-0.5" }, scanned.last.action)),
+                e("div", null, e("dt", { className: "text-zinc-400 text-xs" }, "Datum"), e("dd", { className: "mt-0.5 tabular-nums" }, formatDate(scanned.last.date)))
+              )
+            ),
+            e("div", { className: "mt-auto grid gap-3 pt-6" },
+              scanned.status !== "onderhoud"
+                ? e(Button, { variant: "warning", size: "lg", onClick: takeIntoMaintenance, className: "w-full" },
+                    e(Wrench, { size: 18 }), "In onderhoud nemen")
+                : e(Button, { variant: "outline", size: "lg", disabled: true, className: "w-full bg-white/5 text-zinc-400 border-white/10" },
+                    e(Wrench, { size: 18 }), "Al in onderhoud"),
+              scanned.status === "onderhoud"
+                ? e(Button, { variant: "success", size: "lg", onClick: takeOutOfMaintenance, className: "w-full" },
+                    e(CheckCircle2, { size: 18 }), "Uit onderhoud halen")
+                : e(Button, { variant: "outline", size: "lg", disabled: true, className: "w-full bg-white/5 text-zinc-400 border-white/10" },
+                    e(CheckCircle2, { size: 18 }), "Niet in onderhoud"),
+              e(Button, { variant: "ghost", onClick: reset, className: "text-zinc-300 hover:bg-white/10" },
+                e(RotateCcw, { size: 16 }), "Andere box scannen")
+            )
+          ),
+
+          stage === "form" && scanned && e("form", { onSubmit: submitForm, className: "flex-1 flex flex-col" },
+            e("div", { className: "flex-1 overflow-y-auto px-4 pb-6 space-y-4" },
+              e("div", { className: "rounded-xl bg-zinc-900 ring-1 ring-white/10 p-4 flex items-center justify-between" },
+                e("div", null,
+                  e("div", { className: "text-xs text-zinc-400" }, "Box"),
+                  e("div", { className: "text-lg font-semibold tabular-nums" }, scanned.id),
+                  e("div", { className: "text-xs text-zinc-400 mt-0.5" }, scanned.type)
+                ),
+                e(StatusBadge, { status: scanned.status })
+              ),
+              e("div", null,
+                e("label", { className: "block text-sm font-medium mb-1.5" }, "Reden ", e("span", { className: "text-red-400" }, "*")),
+                e("div", { className: "relative" },
+                  e("select", {
+                    value: reden,
+                    onChange: ev => setReden(ev.target.value),
+                    required: true,
+                    className: "w-full h-11 px-3 pr-9 rounded-lg bg-zinc-900 ring-1 ring-white/10 text-white appearance-none focus:outline-none focus:ring-2 focus:ring-white"
+                  },
+                    e("option", { value: "", disabled: true }, "Kies een reden…"),
+                    ...REDEN_OPTIES.map(r => e("option", { key: r, value: r }, r))
+                  ),
+                  e(ChevronRight, { size: 16, className: "absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-zinc-400 pointer-events-none" })
+                )
+              ),
+              e("div", null,
+                e("label", { className: "block text-sm font-medium mb-1.5" }, "Toelichting"),
+                e("textarea", {
+                  value: toelichting,
+                  onChange: ev => setToelichting(ev.target.value),
+                  rows: 3,
+                  placeholder: "Beschrijf wat er aan de hand is…",
+                  className: "w-full px-3 py-2.5 rounded-lg bg-zinc-900 ring-1 ring-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-white"
+                })
+              ),
+              e("div", null,
+                e("div", { className: "flex items-center justify-between mb-1.5" },
+                  e("label", { className: "block text-sm font-medium" }, "Onderdelen"),
+                  e("span", { className: "text-xs text-zinc-400 tabular-nums" }, parts.length, " toegevoegd")
+                ),
+                e("div", { className: "flex gap-2" },
+                  e("input", {
+                    value: partInput,
+                    onChange: ev => setPartInput(ev.target.value),
+                    onKeyDown: ev => { if (ev.key === "Enter") { ev.preventDefault(); addPart(); } },
+                    placeholder: "Onderdeel-ID handmatig",
+                    className: "flex-1 h-10 px-3 rounded-lg bg-zinc-900 ring-1 ring-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-white"
+                  }),
+                  e(Button, { type: "button", onClick: addPart, variant: "outline", className: "border-white/10 bg-white/5 text-white hover:bg-white/10", size: "md" },
+                    e(Plus, { size: 16 }))
+                ),
+                e(Button, { type: "button", onClick: simulatePartScan, variant: "ghost", className: "mt-2 w-full text-zinc-300 hover:bg-white/10 border border-dashed border-white/15" },
+                  e(ScanLine, { size: 16 }), "Onderdelen scannen"
+                ),
+                parts.length > 0 && e("ul", { className: "mt-3 space-y-2" },
+                  ...parts.map(p => e("li", { key: p.id, className: "flex items-center gap-3 rounded-lg bg-zinc-900 ring-1 ring-white/10 px-3 py-2" },
+                    e("div", { className: "h-8 w-8 rounded-md bg-white/5 grid place-items-center text-zinc-300" }, e(Package, { size: 16 })),
+                    e("div", { className: "flex-1 min-w-0" },
+                      e("div", { className: "text-sm font-medium tabular-nums truncate" }, p.id),
+                      e("div", { className: "text-xs text-zinc-400" }, p.type)
+                    ),
+                    e("button", { type: "button", onClick: () => removePart(p.id), className: "h-8 w-8 grid place-items-center rounded-md text-zinc-400 hover:text-white hover:bg-white/10", "aria-label": "Verwijder" },
+                      e(Trash2, { size: 16 })
+                    )
+                  ))
+                )
+              )
+            ),
+            e("div", { className: "px-4 pb-[max(env(safe-area-inset-bottom),16px)] pt-3 border-t border-white/5 grid grid-cols-2 gap-2" },
+              e(Button, { type: "button", variant: "ghost", className: "text-zinc-300 hover:bg-white/10", onClick: () => setStage("choose") }, "Terug"),
+              e(Button, { type: "submit", variant: "warning", disabled: !reden }, e(ClipboardCheck, { size: 18 }), "Bevestigen")
+            )
+          ),
+
+          stage === "success" && scanned && e("div", { className: "flex-1 flex flex-col items-center justify-center px-6 text-center" },
+            e("div", { className: "h-16 w-16 rounded-full bg-emerald-500/15 ring-1 ring-emerald-500/40 grid place-items-center" },
+              e(CheckCircle2, { size: 32, className: "text-emerald-400" })
+            ),
+            e("h3", { className: "mt-5 text-xl font-semibold" }, "Geregistreerd"),
+            e("p", { className: "mt-2 text-sm text-zinc-400 max-w-sm" },
+              "Box ", e("span", { className: "font-medium text-white tabular-nums" }, scanned.id),
+              " is bijgewerkt en zichtbaar in het dashboard."
+            ),
+            e("div", { className: "mt-8 grid gap-2 w-full max-w-xs" },
+              e(Button, { onClick: onBack, className: "w-full bg-white text-zinc-900 hover:bg-zinc-100", size: "lg" }, "Terug naar dashboard"),
+              e(Button, { variant: "ghost", onClick: reset, className: "w-full text-zinc-300 hover:bg-white/10" },
+                e(ScanLine, { size: 16 }), "Volgende box scannen"
+              )
+            )
+          )
+        );
+      }
+
+      // -----------------------------
+      // Screen 3 — Box detail
+      // -----------------------------
+      function BoxDetail({ box, onBack }) {
+        if (!box) {
+          return e("div", { className: "min-h-dvh grid place-items-center" },
+            e("div", { className: "text-center" },
+              e("p", { className: "text-sm text-zinc-500" }, "Box niet gevonden."),
+              e(Button, { onClick: onBack, variant: "outline", className: "mt-4" }, "Terug")
+            )
+          );
+        }
+
+        const Section = ({ title, icon: Icon, children, action }) => e(Card, { className: "p-5" },
+          e("div", { className: "flex items-center justify-between mb-4" },
+            e("div", { className: "flex items-center gap-2" },
+              e("div", { className: "h-7 w-7 rounded-md bg-zinc-100 text-zinc-600 grid place-items-center" }, e(Icon, { size: 15 })),
+              e("h3", { className: "text-sm font-semibold tracking-tight" }, title)
+            ),
+            action
+          ),
+          children
+        );
+
+        return e("div", { "data-screen-enter": true, className: "min-h-dvh" },
+          e("header", { className: "sticky top-0 z-10 border-b border-zinc-200 bg-white/80 backdrop-blur" },
+            e("div", { className: "mx-auto max-w-4xl px-4 sm:px-6 h-14 flex items-center gap-2" },
+              e(Button, { variant: "ghost", size: "icon", onClick: onBack }, e(ArrowLeft, { size: 18 })),
+              e("div", { className: "flex-1 min-w-0 flex items-center gap-3" },
+                e("h1", { className: "text-base font-semibold tabular-nums truncate" }, box.id),
+                e(StatusBadge, { status: box.status })
+              )
+            )
+          ),
+          e("main", { className: "mx-auto max-w-4xl px-4 sm:px-6 py-6 space-y-4" },
+            // Top hero
+            e(Card, { className: "p-5 sm:p-6" },
+              e("div", { className: "flex items-start justify-between gap-4" },
+                e("div", null,
+                  e("div", { className: "text-xs uppercase tracking-wide text-zinc-500" }, "Box"),
+                  e("h2", { className: "mt-1 text-3xl sm:text-4xl font-semibold tracking-tight tabular-nums" }, box.id),
+                  e("p", { className: "mt-1 text-sm text-zinc-600" }, box.type)
+                ),
+                e("div", { className: "shrink-0" }, e(StatusBadge, { status: box.status, size: "lg" }))
+              ),
+              e("div", { className: "mt-5 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm" },
+                e("div", null,
+                  e("div", { className: "flex items-center gap-1.5 text-zinc-500 text-xs" }, e(MapPin, { size: 12 }), "Locatie"),
+                  e("div", { className: "mt-1 font-medium" }, box.location)
+                ),
+                e("div", null,
+                  e("div", { className: "flex items-center gap-1.5 text-zinc-500 text-xs" }, e(Calendar, { size: 12 }), "In omloop sinds"),
+                  e("div", { className: "mt-1 font-medium tabular-nums" }, formatDate(box.sinds))
+                ),
+                e("div", null,
+                  e("div", { className: "flex items-center gap-1.5 text-zinc-500 text-xs" }, e(History, { size: 12 }), "Laatste actie"),
+                  e("div", { className: "mt-1 font-medium" }, box.last.action)
+                ),
+                e("div", null,
+                  e("div", { className: "flex items-center gap-1.5 text-zinc-500 text-xs" }, e(Calendar, { size: 12 }), "Datum"),
+                  e("div", { className: "mt-1 font-medium tabular-nums" }, formatDate(box.last.date))
+                )
+              )
+            ),
+
+            // Onderhoudshistorie — timeline
+            e(Section, { title: "Onderhoudshistorie", icon: History },
+              box.history.length === 0
+                ? e("p", { className: "text-sm text-zinc-500" }, "Nog geen events.")
+                : e("ol", { className: "relative ml-3 border-l border-zinc-200" },
+                    ...box.history.map((ev, i) => e("li", { key: i, className: "pl-5 pb-5 last:pb-0 relative" },
+                      e("span", { className: "absolute -left-1.5 top-1 h-3 w-3 rounded-full bg-white ring-2 ring-zinc-300" }),
+                      e("div", { className: "flex flex-wrap items-baseline gap-x-2" },
+                        e("h4", { className: "text-sm font-semibold" }, ev.action),
+                        e("span", { className: "text-xs text-zinc-500 tabular-nums" }, formatDate(ev.date))
+                      ),
+                      e("div", { className: "mt-1 text-sm text-zinc-600 flex flex-wrap items-center gap-x-3 gap-y-1" },
+                        e("span", { className: "inline-flex items-center gap-1" }, e(User, { size: 12, className: "text-zinc-400" }), ev.by),
+                        ev.reason && ev.reason !== "—" && e("span", { className: "inline-flex items-center gap-1" }, e(ShieldAlert, { size: 12, className: "text-zinc-400" }), ev.reason)
+                      ),
+                      ev.parts && ev.parts.length > 0 && e("div", { className: "mt-2 flex flex-wrap gap-1.5" },
+                        ...ev.parts.map((p, pi) => e("span", { key: pi, className: "inline-flex items-center gap-1 rounded-md bg-zinc-100 text-zinc-700 text-xs px-2 py-0.5" },
+                          e(Package, { size: 11 }), p))
+                      )
+                    ))
+                  )
+            ),
+
+            // Gekoppelde onderdelen
+            e(Section, { title: "Gekoppelde onderdelen", icon: Package, action:
+              e("span", { className: "text-xs text-zinc-500 tabular-nums" }, box.parts.length, " stuks")
+            },
+              box.parts.length === 0
+                ? e("p", { className: "text-sm text-zinc-500" }, "Geen onderdelen gekoppeld.")
+                : e("ul", { className: "divide-y divide-zinc-100 -mx-2" },
+                    ...box.parts.map(p => e("li", { key: p.id, className: "flex items-center gap-3 px-2 py-2.5" },
+                      e("div", { className: "h-9 w-9 rounded-md bg-zinc-100 grid place-items-center text-zinc-500" }, e(Package, { size: 16 })),
+                      e("div", { className: "flex-1 min-w-0" },
+                        e("div", { className: "text-sm font-medium tabular-nums" }, p.id),
+                        e("div", { className: "text-xs text-zinc-500" }, p.type)
+                      ),
+                      e(PartStatusBadge, { status: p.status })
+                    ))
+                  )
+            )
+          )
+        );
+      }
+
+      // -----------------------------
+      // App shell + routing
+      // -----------------------------
+      function App() {
+        const [boxes, setBoxes] = useState(INITIAL_BOXES);
+        const [route, setRoute] = useState({ name: "dashboard" });
+        const [toast, setToast] = useState(null);
+
+        function showToast(msg) {
+          setToast({ msg, id: Math.random() });
+          setTimeout(() => setToast(t => (t && t.msg === msg ? null : t)), 3200);
+        }
+
+        function go(name, params = {}) {
+          setRoute({ name, ...params });
+          window.scrollTo({ top: 0 });
+        }
+
+        function applyAction({ boxId, action, reden, toelichting, parts }) {
+          setBoxes(prev => prev.map(b => {
+            if (b.id !== boxId) return b;
+            const newStatus = action === "in-onderhoud" ? "onderhoud" : "omloop";
+            const event = action === "in-onderhoud"
+              ? { date: today, action: "In onderhoud genomen", by: "Resource Planner", reason: reden || "—", parts: (parts || []).map(p => `${p.type} (${p.id})`) }
+              : { date: today, action: "Uit onderhoud gehaald", by: "Resource Planner", reason: "Reparatie afgerond", parts: [] };
+            return {
+              ...b,
+              status: newStatus,
+              last: { action: event.action, date: today },
+              history: [event, ...b.history]
+            };
+          }));
+          showToast(action === "in-onderhoud" ? "Box in onderhoud genomen" : "Box weer in omloop");
+        }
+
+        const currentBox = route.name === "detail" ? boxes.find(b => b.id === route.id) : null;
+
+        return e(React.Fragment, null,
+          route.name === "dashboard" && e(Dashboard, {
+            boxes,
+            onScan: () => go("scan"),
+            onOpenBox: id => go("detail", { id })
+          }),
+          route.name === "scan" && e(ScanScreen, {
+            boxes,
+            onBack: () => go("dashboard"),
+            onConfirm: applyAction
+          }),
+          route.name === "detail" && e(BoxDetail, {
+            box: currentBox,
+            onBack: () => go("dashboard")
+          }),
+          // Toast
+          toast && e("div", { key: toast.id, className: "fixed left-1/2 -translate-x-1/2 bottom-6 z-50" },
+            e("div", { className: "rounded-lg bg-zinc-900 text-white text-sm px-4 py-2.5 shadow-lg ring-1 ring-white/10 flex items-center gap-2" },
+              e(CheckCircle2, { size: 16, className: "text-emerald-400" }),
+              toast.msg,
+              e("button", { onClick: () => setToast(null), className: "ml-2 -mr-1 text-zinc-400 hover:text-white" }, e(X, { size: 14 }))
+            )
+          )
+        );
+      }
+
+      createRoot(document.getElementById("root")).render(e(App));
+    </script>
+  </body>
+</html>

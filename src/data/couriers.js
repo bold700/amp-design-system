@@ -14,6 +14,83 @@ const cityCoords = {
   Onbekend:   [52.0314, 5.1681]
 };
 
+// Echte Nederlandse steden — gebruikt als waypoints voor corridor-routes
+const NL_CITIES = {
+  Amsterdam:   [52.3676, 4.9041],
+  Haarlem:     [52.3874, 4.6462],
+  Alkmaar:     [52.6326, 4.7484],
+  Almere:      [52.3508, 5.2647],
+  Hilversum:   [52.2292, 5.1669],
+  Amersfoort:  [52.1561, 5.3878],
+  Apeldoorn:   [52.2112, 5.9699],
+  Zwolle:      [52.5168, 6.0830],
+  Groningen:   [53.2194, 6.5665],
+  Leeuwarden:  [53.2012, 5.7999],
+  Enschede:    [52.2215, 6.8937],
+  Arnhem:      [51.9851, 5.8987],
+  Nijmegen:    [51.8126, 5.8372],
+  DenBosch:    [51.6998, 5.3037],
+  Eindhoven:   [51.4416, 5.4697],
+  Tilburg:     [51.5555, 5.0913],
+  Breda:       [51.5719, 4.7683],
+  Maastricht:  [50.8514, 5.6910],
+  Roermond:    [51.1942, 5.9870],
+  Rotterdam:   [51.9244, 4.4777],
+  DenHaag:     [52.0705, 4.3007],
+  Leiden:      [52.1601, 4.4970],
+  Delft:       [52.0116, 4.3571],
+  Dordrecht:   [51.8133, 4.6906],
+  Middelburg:  [51.4988, 3.6109],
+  Goes:        [51.5045, 3.8881],
+  Bergen:      [51.4938, 4.2871], // Bergen op Zoom
+  Lelystad:    [52.5185, 5.4714]
+};
+
+// Acht corridor-regio's. Elke bezorger krijgt er één toegewezen op basis van id.
+// De route loopt vanaf het depot via deze waypoints — vergelijkbaar met hoe
+// een vaste rit-uitzetting eruit ziet voor een logistieke vloot.
+const ROUTE_REGIONS = [
+  { name: "Noord-Holland",     cities: ["Hilversum", "Amsterdam", "Haarlem", "Alkmaar"] },
+  { name: "Randstad-Zuid",     cities: ["Leiden", "DenHaag", "Delft", "Rotterdam"] },
+  { name: "Zuid-Holland",      cities: ["Rotterdam", "Dordrecht", "Bergen", "Middelburg", "Goes"] },
+  { name: "Brabant",           cities: ["DenBosch", "Tilburg", "Breda", "Eindhoven"] },
+  { name: "Limburg",           cities: ["DenBosch", "Eindhoven", "Roermond", "Maastricht"] },
+  { name: "Gelderland",        cities: ["Arnhem", "Nijmegen", "Apeldoorn"] },
+  { name: "Oost-NL",           cities: ["Amersfoort", "Apeldoorn", "Zwolle", "Enschede"] },
+  { name: "Noord-NL",          cities: ["Lelystad", "Zwolle", "Leeuwarden", "Groningen"] }
+];
+
+// Som van de segment-lengtes (Euclidisch in coords — voldoende voor NL-schaal)
+function polylineSegments(points) {
+  const segs = [];
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i][0] - points[i - 1][0];
+    const dy = points[i][1] - points[i - 1][1];
+    const d = Math.hypot(dx, dy);
+    segs.push(d);
+    total += d;
+  }
+  return { segs, total };
+}
+
+// Interpoleer langs een polyline op fractie t (0..1)
+function pointAlong(points, t, segs, total) {
+  if (points.length === 1 || total === 0) return points[0];
+  const target = Math.max(0, Math.min(1, t)) * total;
+  let walked = 0;
+  for (let i = 0; i < segs.length; i++) {
+    if (walked + segs[i] >= target) {
+      const frac = segs[i] === 0 ? 0 : (target - walked) / segs[i];
+      const a = points[i];
+      const b = points[i + 1];
+      return [a[0] + (b[0] - a[0]) * frac, a[1] + (b[1] - a[1]) * frac];
+    }
+    walked += segs[i];
+  }
+  return points[points.length - 1];
+}
+
 // Pool van Nederlandse straatnamen voor adres-generatie
 const streets = [
   "Hoofdstraat", "Dorpsstraat", "Kerkstraat", "Schoolstraat",
@@ -55,25 +132,44 @@ export function shiftEta(eta, deltaMin) {
   return formatTime(parseTime(eta) + deltaMin);
 }
 
-// Deterministische random-walk vanaf depot.
-// Elke stop ~300-700m van de vorige, zodat de route eruitziet als een echte rit.
-// ETA wordt lineair gespreid over de werkuren van de bezorger.
+// Genereer stops langs een corridor van Nederlandse steden.
+// - Elke bezorger krijgt op basis van id een ROUTE_REGIONS-corridor toegewezen.
+// - De polyline = depot + waypoints. Stops worden proportioneel langs deze
+//   polyline verdeeld (eerste stop bij depot, laatste bij eindpunt corridor).
+// - Per stop wordt een kleine afwijking (~300-1500m) toegevoegd, zodat de route
+//   er uitziet als echte adressen langs een traject in plaats van een strakke lijn.
+// - ETA wordt lineair gespreid over de werkuren van de bezorger.
 function generateStops(courierId, depot, totalCount, doneCount, hoursStr) {
   const seed = parseInt(courierId, 10);
   const stops = [];
-  let lat = depot[0];
-  let lng = depot[1];
+
+  if (totalCount === 0) return stops;
+
+  // Kies regio-corridor en bouw polyline.
+  // Route start én eindigt op het depot (round-trip), zodat de bezorger
+  // 's avonds weer terug is in Houten/Utrecht/Nieuwegein.
+  const region = ROUTE_REGIONS[seed % ROUTE_REGIONS.length];
+  const waypointCoords = region.cities
+    .map((name) => NL_CITIES[name])
+    .filter(Boolean);
+  const polyline = [depot, ...waypointCoords, depot];
+  const { segs, total } = polylineSegments(polyline);
 
   const [startStr, endStr] = hoursStr.split(" - ");
   const startMin = parseTime(startStr);
   const endMin = parseTime(endStr);
-  const stopInterval = totalCount > 0 ? (endMin - startMin) / totalCount : 0;
+  const stopInterval = totalCount > 1 ? (endMin - startMin) / (totalCount - 1) : 0;
 
   for (let i = 0; i < totalCount; i++) {
-    const angle = ((seed + i * 31) % 360) * (Math.PI / 180);
-    const step = 0.003 + ((seed + i * 17) % 5) * 0.001;
-    lat += Math.sin(angle) * step;
-    lng += Math.cos(angle) * step * 1.5;
+    // Fractie langs de corridor — 0 bij depot, 1 bij eindpunt
+    const t = totalCount > 1 ? i / (totalCount - 1) : 0;
+    const [baseLat, baseLng] = pointAlong(polyline, t, segs, total);
+
+    // Kleine deterministische jitter rond de corridor (~300-1500m)
+    const angle = ((seed * 37 + i * 91) % 360) * (Math.PI / 180);
+    const radius = 0.0028 + ((seed * 7 + i * 13) % 9) * 0.0012;
+    const lat = baseLat + Math.sin(angle) * radius;
+    const lng = baseLng + Math.cos(angle) * radius * 1.5;
 
     const street = streets[(seed + i * 13) % streets.length];
     const houseNumber = ((seed + i * 7) % 198) + 1;
@@ -85,7 +181,8 @@ function generateStops(courierId, depot, totalCount, doneCount, hoursStr) {
       done: i < doneCount,
       orderNumber: `${courierId}-${(i + 1).toString().padStart(3, "0")}`,
       address: `${street} ${houseNumber}`,
-      eta
+      eta,
+      region: region.name
     });
   }
   return stops;
@@ -174,16 +271,64 @@ const rawCouriers = [
   { name: "AMP Thijs V",     id: "1179", city: "Houten",     progress: "26 / 39 Orders", hours: "08:30 - 17:55", status: "",                         active: false }
 ];
 
-// Verrijk elke bezorger met depot + stops + currentLocation
+// Bepaal check-in status deterministisch per bezorger.
+//
+// Drie statussen op basis van id en progress:
+//   - "niet-begonnen": loginTime === null. ~15% van de bezorgers.
+//   - "klaar":         loginTime + logoutTime gezet. Alle bezorgers met done === total.
+//   - "bezig":         loginTime gezet, logoutTime null. De rest.
+//
+// loginTime ligt rond geplande starttijd (max 5 min vroeg, max 35 min laat).
+// logoutTime ligt rond geplande eindtijd (max 25 min vroeg, max 30 min laat).
+function deriveCheckIn(courierId, hoursStr, done, total) {
+  const seed = parseInt(courierId, 10);
+  const [startStr, endStr] = hoursStr.split(" - ");
+  const plannedStart = parseTime(startStr);
+  const plannedEnd = parseTime(endStr);
+
+  // ~15% nog niet ingelogd. Selecteer deterministisch via id-modulo.
+  const notLoggedIn = seed % 7 === 3;
+  if (notLoggedIn) {
+    return { loginTime: null, logoutTime: null, status: "niet-begonnen" };
+  }
+
+  // Login: -5 t/m +35 min t.o.v. geplande start
+  const loginOffset = ((seed * 13) % 41) - 5;
+  const loginTime = formatTime(plannedStart + loginOffset);
+
+  // Klaar als alle stops done zijn
+  if (total > 0 && done === total) {
+    const logoutOffset = ((seed * 17) % 56) - 25;
+    const logoutTime = formatTime(plannedEnd + logoutOffset);
+    return { loginTime, logoutTime, status: "klaar" };
+  }
+
+  return { loginTime, logoutTime: null, status: "bezig" };
+}
+
+// Verrijk elke bezorger met depot + stops + currentLocation + check-in status
 export const couriers = rawCouriers.map((c) => {
   const depot = cityCoords[c.city] || cityCoords.Houten;
   const total = parseInt(c.progress.split("/")[1], 10) || 0;
   const done = parseInt(c.progress.split("/")[0], 10) || 0;
-  const stops = generateStops(c.id, depot, total, done, c.hours);
-  const currentLocation = done > 0
-    ? [stops[done - 1].lat, stops[done - 1].lng]
+  const checkIn = deriveCheckIn(c.id, c.hours, done, total);
+
+  // Niet-ingelogde bezorgers hebben effectief 0 voltooide stops
+  const effectiveDone = checkIn.status === "niet-begonnen" ? 0 : done;
+  const stops = generateStops(c.id, depot, total, effectiveDone, c.hours);
+  const currentLocation = effectiveDone > 0
+    ? [stops[effectiveDone - 1].lat, stops[effectiveDone - 1].lng]
     : depot;
-  return { ...c, depot, stops, currentLocation };
+
+  return {
+    ...c,
+    depot,
+    stops,
+    currentLocation,
+    loginTime: checkIn.loginTime,
+    logoutTime: checkIn.logoutTime,
+    checkInStatus: checkIn.status
+  };
 });
 
 // Depots = unieke steden waar bezorgers vandaan komen, met coords

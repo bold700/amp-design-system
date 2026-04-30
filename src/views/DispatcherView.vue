@@ -70,9 +70,9 @@ const selectedCourier = computed(() =>
     : null
 );
 
-// Map default
-const defaultCenter = [52.0314, 5.1681];
-const defaultZoom = 11;
+// Map default — overzicht van heel NL als geen bezorger is geselecteerd
+const defaultCenter = [52.15, 5.30];
+const defaultZoom = 8;
 
 // Huidige posities (volgt filter)
 const currentLocations = computed(() =>
